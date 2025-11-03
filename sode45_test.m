@@ -8,9 +8,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Brownian Motion Example
-f = @(t, x, u, p) [0; 0];
+f = @(t, x, u) [0; 0];
 u = @(t, x) [0; 0];
-p = 0;
 
 delta_t = 1e-2;
 
@@ -31,12 +30,8 @@ t = zeros([numel(tspan), m]);
 
 tolerances = odeset(RelTol=1e-12, AbsTol=1e-12);
 
-t_k = tspan;
-
 parfor i = 1:m
-    w_k = w(numel(t_k));
-    w_func = @(t) w_k(:, floor(t /delta_t) + 1);
-    [t(:, i), x(:, :, i)] = sode45(f, G, u, p, w, tspan, delta_t, x0, tolerances, w_k_func = w_func);
+    [t(:, i), x(:, :, i)] = sode45(f, G, u, w, tspan, delta_t, x0, tolerances);
     i
 end
 %% Analyze distribution of trajectories to check if it matches expectations
@@ -64,18 +59,17 @@ title("x_2 Trajectories")
 grid on
 
 %% Dynamical System Example
-f = @(t, x, u, p) [x(2); u(1)];
+f = @(t, x, u) [x(2); u(1)];
 u = @(t, x) -2;
-p = 0;
 
 delta_t = 1e-2;
 
+w = @(n) randn([2, n]);
+
 sigma_accel = 0.2; % [m / s2]
-G = @(t, x, u, p) [0, 0; 0, sigma_accel] * sqrt(delta_t); % need to double check the sqrt(delta t) part
+G = @(t, x, u) [0, 0; 0, sigma_accel] * sqrt(delta_t); % need to double check the sqrt(delta t) part
 
 x0 = [0; 1];
-
-w = @(n) randn([2, n]);
 
 tspan = 0:delta_t:1;
 
@@ -86,12 +80,8 @@ t = zeros([numel(tspan), m]);
 
 tolerances = odeset(RelTol=1e-12, AbsTol=1e-12);
 
-t_k = tspan;
-
 parfor i = 1:m
-    w_k = w(numel(t_k));
-    w_func = @(t) w_k(:, floor(t /delta_t) + 1);
-    [t(:, i), x(:, :, i)] = sode45(f, G, u, p, w, tspan, delta_t, x0, tolerances, w_k_func = w_func);
+    [t(:, i), x(:, :, i)] = sode45(f, G, u, w, tspan, delta_t, x0, tolerances);
     i
 end
 %% Analyze distribution of trajectories to check if it matches expectations
