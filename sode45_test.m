@@ -1,11 +1,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% AAE 590ACA
-% Stochastic SCP Rocket Landing Project
+% AAE 590SC
+% Path Integral Control on Lie Groups
 % Author: Travis Hastreiter 
-% Created On: 15 April, 2025
-% Description: Test of stochastic propagation without optimized feedback 
-% control
-% Most Recent Change: 15 April, 2025
+% Created On: 3 November, 2025
+% Description: Test of stochastic propagation without optimized control
+% Most Recent Change: 3 November, 2025
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Brownian Motion Example
@@ -13,7 +12,7 @@ f = @(t, x, u, p) [0; 0];
 u = @(t, x) [0; 0];
 p = 0;
 
-delta_t = 1e-3;
+delta_t = 1e-2;
 
 sigma_1 = 2;
 sigma_2 = 3;
