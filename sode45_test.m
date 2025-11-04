@@ -9,9 +9,10 @@
 
 %% Brownian Motion Example
 f = @(t, x, u) [0; 0];
-u = @(t, x) [0; 0];
+t_k = 0:0.01:1;
+u_k = zeros([2, numel(t_k)]);
 
-delta_t = 1e-2;
+noise_delta_t = 1e-2;
 
 sigma_1 = 2;
 sigma_2 = 3;
@@ -21,17 +22,15 @@ x0 = [0; 0];
 
 w = @(n) randn([2, n]);
 
-tspan = 0:delta_t:1;
-
 m = 100;
 
-x = zeros([2, numel(tspan), m]);
-t = zeros([numel(tspan), m]);
+x = zeros([2, numel(t_k), m]);
+t = zeros([numel(t_k), m]);
 
 tolerances = odeset(RelTol=1e-12, AbsTol=1e-12);
 
 parfor i = 1:m
-    [t(:, i), x(:, :, i)] = sode45(f, G, u, w, tspan, delta_t, x0, tolerances);
+    [t(:, i), x(:, :, i)] = sode45(f, G, u_k, w, t_k, noise_delta_t, x0, tolerances);
     i
 end
 %% Analyze distribution of trajectories to check if it matches expectations
@@ -60,18 +59,17 @@ grid on
 
 %% Dynamical System Example
 f = @(t, x, u) [x(2); u(1)];
-u = @(t, x) -2;
+t_k = 0:0.01:1;
+u_k = -2 * ones([2, numel(t_k)]);
 
-delta_t = 1e-2;
+noise_delta_t = 1e-2;
 
 w = @(n) randn([2, n]);
 
 sigma_accel = 0.2; % [m / s2]
-G = @(t, x, u) [0, 0; 0, sigma_accel] * sqrt(delta_t); % need to double check the sqrt(delta t) part
+G = @(t, x, u) [0, 0; 0, sigma_accel] * sqrt(noise_delta_t); % need to double check the sqrt(delta t) part
 
 x0 = [0; 1];
-
-tspan = 0:delta_t:1;
 
 m = 100;
 
@@ -81,7 +79,7 @@ t = zeros([numel(tspan), m]);
 tolerances = odeset(RelTol=1e-12, AbsTol=1e-12);
 
 parfor i = 1:m
-    [t(:, i), x(:, :, i)] = sode45(f, G, u, w, tspan, delta_t, x0, tolerances);
+    [t(:, i), x(:, :, i)] = sode45(f, G, u_k, w, t_k, noise_delta_t, x0, tolerances);
     i
 end
 %% Analyze distribution of trajectories to check if it matches expectations
