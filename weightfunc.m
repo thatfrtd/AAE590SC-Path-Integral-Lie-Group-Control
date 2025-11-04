@@ -5,8 +5,7 @@ w = exp(-(L)/lambda);
 Wsum = sum(w);
 
 % Weighted update
-u_new = u_n;
-dsum = sum(w .* delta_u(:, n, :), 2);
-u_new(:, n) = u_n(:, n) + (dsum / Wsum).';
+dsum = sum(reshape(w, 1, 1, []) .* delta_u, 3);
+u_new = u_n + dsum / Wsum;
 
 end

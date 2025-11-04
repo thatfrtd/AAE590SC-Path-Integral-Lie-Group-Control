@@ -1,4 +1,4 @@
-function [t, x, u_applied] = sode45(f, u_k, sigma, w, t_k, noise_delta_t, x0, tolerances, options)
+function [t, x, u_n, delta_u] = sode45(f, u_k, sigma, w, t_k, noise_delta_t, x0, tolerances, options)
 arguments
     f
     u_k
@@ -30,9 +30,11 @@ u_k_func = @(t) u_k(:, floor(t / control_delta_t) + 1);
 x = x';
 
 % Get continuous control array
-u_applied = zeros(size(u_k, 1), numel(t));
+u_n = zeros(size(u_k, 1), numel(t));
+delta_u = zeros(size(u_k, 1), numel(t));
 for i = 1:numel(t)
-    u_applied(:, i) = u_k_func(t(i));
+    u_n(:, i) = u_k_func(t(i));
+    delta_u(:, i) = sigma / sqrt(noise_delta_t) * options.w_k_func(t(i));
 end
 end
 
