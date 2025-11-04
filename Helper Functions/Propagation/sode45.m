@@ -1,8 +1,8 @@
-function [t, x, u_applied] = sode45(f, G, u_k, w, t_k, noise_delta_t, x0, tolerances, options)
+function [t, x, u_applied] = sode45(f, u_k, sigma, w, t_k, noise_delta_t, x0, tolerances, options)
 arguments
     f
-    G
     u_k
+    sigma
     w
     t_k
     noise_delta_t
@@ -24,7 +24,7 @@ control_delta_t = t_k(2) - t_k(1);
 u_k_func = @(t) u_k(:, floor(t / control_delta_t) + 1);
 
 % Simulate approximated stochastic differential equation
-[t, x] = ode45(@(t, x) f(t, x, u_k_func(t)) + G(t, x, u_k_func(t)) / sqrt(noise_delta_t) * options.w_k_func(t), t_k, x0, tolerances);
+[t, x] = ode45(@(t, x) f(t, x, u_k_func(t) + sigma / sqrt(noise_delta_t) * options.w_k_func(t)), t_k, x0, tolerances);
 
 % I like state as first dimension and timestep as second
 x = x';

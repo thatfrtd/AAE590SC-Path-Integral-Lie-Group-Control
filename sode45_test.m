@@ -8,7 +8,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Brownian Motion Example
-f = @(t, x, u) [0; 0];
+f = @(t, x, u) [0; 0] + u;
 t_k = 0:0.01:1;
 u_k = zeros([2, numel(t_k)]);
 
@@ -16,7 +16,7 @@ noise_delta_t = 1e-2;
 
 sigma_1 = 2;
 sigma_2 = 3;
-G = @(t, x, u, p) [sigma_1, 0; 0, sigma_2];% * sqrt(delta_t);
+sigma = [sigma_1, 0; 0, sigma_2];% * sqrt(delta_t);
 
 x0 = [0; 0];
 
@@ -30,7 +30,7 @@ t = zeros([numel(t_k), m]);
 tolerances = odeset(RelTol=1e-12, AbsTol=1e-12);
 
 parfor i = 1:m
-    [t(:, i), x(:, :, i)] = sode45(f, G, u_k, w, t_k, noise_delta_t, x0, tolerances);
+    [t(:, i), x(:, :, i)] = sode45(f, u_k, sigma, w, t_k, noise_delta_t, x0, tolerances);
     i
 end
 %% Analyze distribution of trajectories to check if it matches expectations
@@ -67,7 +67,7 @@ noise_delta_t = 1e-2;
 w = @(n) randn([2, n]);
 
 sigma_accel = 0.2; % [m / s2]
-G = @(t, x, u) [0, 0; 0, sigma_accel] * sqrt(noise_delta_t); % need to double check the sqrt(delta t) part
+sigma = [0, sigma_accel; 0, sigma_accel] * sqrt(noise_delta_t); % need to double check the sqrt(delta t) part
 
 x0 = [0; 1];
 
@@ -79,7 +79,7 @@ t = zeros([numel(tspan), m]);
 tolerances = odeset(RelTol=1e-12, AbsTol=1e-12);
 
 parfor i = 1:m
-    [t(:, i), x(:, :, i)] = sode45(f, G, u_k, w, t_k, noise_delta_t, x0, tolerances);
+    [t(:, i), x(:, :, i)] = sode45(f, u_k, sigma, w, t_k, noise_delta_t, x0, tolerances);
     i
 end
 %% Analyze distribution of trajectories to check if it matches expectations
