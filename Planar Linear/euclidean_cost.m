@@ -1,14 +1,17 @@
-function [L, cost_t, cost_exit] = euclidean_cost(xtraj, xtarg, u_traj, dt, eta, diff_multiplier)
+function [L, cost_t, cost_exit] = euclidean_cost(xtraj, vtraj, xtarg, vtarg, u_traj, dt, eta, diff_multiplier)
 arguments
     xtraj
+    vtraj
     xtarg
+    vtarg
     u_traj
     dt
     eta = 0.9
     diff_multiplier = 0.02;
 end
 xf = xtraj(:, end, :);
-cost_exit = squeeze(vecnorm(xf - xtarg)); 
+vf = vtraj(:, end, :);
+cost_exit = squeeze(vecnorm(xf - xtarg)) + squeeze(vecnorm(vf - vtarg)); 
 
 diff_cost = squeeze(sum(vecnorm(diff(u_traj, 1, 2)), 2)); % penalize change in control 
 

@@ -47,7 +47,7 @@ classdef R2 < Group
         end
 
         function X = Exp(G, tau)
-            X = tau;
+            X = R2(tau);
         end
         function tau = Log(X)
             tau = X.element;

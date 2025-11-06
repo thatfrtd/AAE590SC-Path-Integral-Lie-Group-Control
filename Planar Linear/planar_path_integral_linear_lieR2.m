@@ -12,13 +12,16 @@
 z2 = zeros(2);
 I2 = eye(2);
 
-A = [z2, I2; z2, z2];
-B = [z2; I2];
+A = z2;
 
-f = @(t, x, u) A * x + B * u;
+% Dynamics are euler-poincare???
+f = @(t, x) A * x;
+B = @(t, x) I2;
 control_delta_t = 0.01;
 t_k = 0:control_delta_t:1;
-u_k = 0 * ones([2, numel(t_k)]);
+u_k = 0 * ones([2, numel(t_k) - 1]);
+
+R = eye(2); % ACTUALLY PUT IN COST FUNCTION
 
 %% Define Initial Condition and Target
 x0 = [0; 0; 0; 1];
@@ -39,16 +42,13 @@ sigma_accel = 0.4; % [m / s2]
 sigma = [sigma_accel, 0; 0, sigma_accel] * sqrt(noise_delta_t); % need to double check the sqrt(delta t) part
 
 %% Run Monte Carlo
-m = 200;
+m = 20;
 
-x = zeros([4, numel(t_k), m]);
-t = zeros([numel(t_k), m]);
-u_n = zeros([2, numel(t_k), m]);
-delta_u = zeros([2, numel(t_k), m]);
+g_k = createArray(numel(t_k), m, class(g0)); % array of group elements
+twist_k = zeros([g0.dim, numel(t_k)]); % array of twists (body velocities)
+delta_u = zeros([2, numel(t_k) - 1, m]);
 
-tolerances = odeset(RelTol=1e-4, AbsTol=1e-4, InitialStep=0.1, MaxStep=0.1);
-
-iterations = 200;
+iterations = 100;
 lambda = 0.01;
 eta = 0.9; % 0 means only path cost (don't do), 1 means only terminal cost
 average_cost = zeros([1, iterations]);
@@ -56,12 +56,12 @@ cost_t = zeros([m, iterations]);
 cost_exit = zeros([m, iterations]);
 
 for j = 1 : iterations
-    parfor i = 1 : m
-        [t(:, i), x(:, :, i), u_n(:, :, i), delta_u(:, :, i)] = one_step_euler_maruyama_lie_group(f, u_k, sigma, w, t_k, noise_delta_t, x0, tolerances);
+    for i = 1 : m
+        [g_k(:, i), twist_k(:, :, i), delta_u(:, :, i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma);
     end
     
-    [L, cost_t(:, j), cost_exit(:, j)] = liegroup_cost(x, xtarg, u_n + delta_u, control_delta_t, eta);
-    u_k = liegroup_update(u_n, delta_u, L, lambda);
+    [L, cost_t(:, j), cost_exit(:, j)] = liegroup_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, eta);
+    u_k = liegroup_update(g_k, u_k, twist_k, delta_u, f, B([], []), R, L, t_k, lambda);
 
     average_cost(j) = sum(L) / numel(L);
     average_cost(j)

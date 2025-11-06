@@ -15,12 +15,15 @@ end
 %% Path Cost
 diff_cost = squeeze(sum(vecnorm(diff(u_k, 1, 2)), 2)); % penalize change in control 
 
-cost_t = squeeze(sum(vecnorm(u_k, 2, 1)) * delta_t) + diff_cost * diff_multiplier;
+cost_t = squeeze(sum(vecnorm(u_k, 2, 1)).^2 * delta_t) + diff_cost * diff_multiplier;
 
 %% Exit Cost
 g_f = g_k(end, :);
-group_error = vecnorm(g_desired.left_invariant_error(g_f)); % when use right invariant?
-twist_error = vecnorm(twist_desired - twist_k);
+group_error = zeros([numel(g_f), 1]);
+for i = 1 : numel(g_f)
+    group_error(i) = norm(g_desired.left_invariant_error(g_f(i))); % when use right invariant?
+end
+twist_error = squeeze(vecnorm(twist_desired - twist_k(:, end, :)));
 
 cost_exit = group_error + twist_error;
 
