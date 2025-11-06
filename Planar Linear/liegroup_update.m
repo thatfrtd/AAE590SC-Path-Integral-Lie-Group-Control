@@ -43,9 +43,9 @@ L_k = cumsum(L_k, 2, "reverse");
 L_k = S_k + L_k + lambda * log(cumprod(sqrt(det(2 * pi * lambda * Y * delta_t))));
 
 D = exp(-1 / lambda * L_k);
-D = D / sum(D);
+D = reshape(D ./ sum(D, 2), 1, n, num_traj);
 
-D_expec = sum(D .* eps_k * sqrt(delta_t));
+D_expec = sum(D .* eps_k * sqrt(delta_t), 3);
 
-u_k_Kp1 = R \ B' * Y \ B * (u_k_K * delta_t + D_expec);
+u_k_Kp1 = pagemtimes(R \ B' * Y \ B, u_k_K * delta_t + D_expec);
 end
