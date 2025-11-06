@@ -64,7 +64,7 @@ for j = 1 : iterations
             v(:, :, i) = x_full(3:4, :);
         end
     elseif integration_method == "oneeuler"
-        parfor i = 1 : m
+        for i = 1 : m
             [t(:, i), x(:, :, i), v(:, :, i), u_n(:, :, i), delta_u(:, :, i)] = one_step_euler_maruyama_euclidean(f_func, B_func, u_k, sigma, t_k, x0, v0);
         end
     end
