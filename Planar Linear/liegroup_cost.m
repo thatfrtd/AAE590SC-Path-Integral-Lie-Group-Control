@@ -13,9 +13,9 @@ arguments
 end
 
 %% Path Cost
-diff_cost = squeeze(sum(vecnorm(diff(u_k, 1, 2)), 2)); % penalize change in control 
+%diff_cost = squeeze(cumsum(vecnorm(diff(u_k, 1, 2)), 2)); % penalize change in control 
 
-cost_t = squeeze(sum(vecnorm(u_k, 2, 1)).^2 * delta_t) + diff_cost * diff_multiplier;
+cost_t = squeeze(cumsum(vecnorm(u_k, 2, 1)).^2 * delta_t);% + diff_cost * diff_multiplier;
 
 %% Exit Cost
 g_f = g_k(end, :);
@@ -25,7 +25,7 @@ for i = 1 : numel(g_f)
 end
 twist_error = squeeze(vecnorm(twist_desired - twist_k(:, end, :)));
 
-cost_exit = group_error + twist_error;
+cost_exit = (group_error + twist_error)';
 
 %% Total Cost
 L = cost_exit * eta + cost_t * (1 - eta);
