@@ -17,6 +17,7 @@ A = z2;
 % Dynamics are euler-poincare???
 f = @(t, x) A * x;
 B = @(t, x) I2;
+f_with_control = @(t, x, u) [z2, I2; z2, z2] * x + [z2; B(t, x)] * u;
 control_delta_t = 0.01;
 t_k = 0:control_delta_t:1;
 u_k = 0 * ones([2, numel(t_k) - 1]);
@@ -48,7 +49,7 @@ g_k = createArray(numel(t_k), m, class(g0)); % array of group elements
 twist_k = zeros([g0.dim, numel(t_k)]); % array of twists (body velocities)
 delta_u = zeros([2, numel(t_k) - 1, m]);
 
-iterations = 200;
+iterations = 100;
 lambda = 0.3;
 eta = 0.9; % 0 means only path cost (don't do), 1 means only terminal cost
 average_cost = zeros([1, iterations]);
@@ -89,13 +90,13 @@ m = 50;
 
 x = zeros([4, numel(t_k), m]);
 t = zeros([numel(t_k), m]);
-delta_u = zeros([2, numel(t_k), m]);
+delta_u = zeros([2, numel(t_k) - 1, m]);
 
 tolerances = odeset(RelTol=1e-12, AbsTol=1e-12);
-parfor i = 1 : m
-    [t(:, i), x(:, :, i), ~, delta_u(:, :, i)] = sode45(f, u_k, sigma, w, t_k, noise_delta_t, x0, tolerances);
+for i = 1 : m
+    [t(:, i), x(:, :, i), ~, delta_u(:, :, i)] = sode45(f_with_control, u_k, sigma, w, t_k, noise_delta_t, x0, tolerances);
 end
-[t_nom, x_nom, u_n, ~] = sode45(f, u_k, sigma*0, w, t_k, noise_delta_t, x0, tolerances);
+[t_nom, x_nom, u_n, ~] = sode45(f_with_control, u_k, sigma*0, w, t_k, noise_delta_t, x0, tolerances);
 
 figure
 tiledlayout(1, 3);
@@ -123,10 +124,10 @@ title("Velocity vs Time")
 grid on
 
 nexttile
-stairs(t, squeeze(u_n(1, :) + delta_u(1, :, :)), Color = [192, 192, 192] / 256, HandleVisibility="off"); hold on
-stairs(t, squeeze(u_n(2, :) + delta_u(2, :, :)), Color = [192, 192, 192] / 256, HandleVisibility="off");
-stairs(t_nom, squeeze(u_n(1, :)), Color = "r");
-stairs(t_nom, squeeze(u_n(2, :)), Color = "b");
+stairs(t(1 : end - 1, :), squeeze(u_n(1, :) + delta_u(1, :, :)), Color = [192, 192, 192] / 256, HandleVisibility="off"); hold on
+stairs(t(1 : end - 1, :), squeeze(u_n(2, :) + delta_u(2, :, :)), Color = [192, 192, 192] / 256, HandleVisibility="off");
+stairs(t_nom(1 : end - 1, :), squeeze(u_n(1, :)), Color = "r");
+stairs(t_nom(1 : end - 1, :), squeeze(u_n(2, :)), Color = "b");
 xlabel("Time")
 ylabel("Control")
 legend("a_x", "a_y")
