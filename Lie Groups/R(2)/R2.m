@@ -57,7 +57,7 @@ classdef R2 < Group
             val = eye(X.dim);
         end
 
-        function val = ad(X)
+        function val = ad(X, twist)
             val = eye(X.dim);
         end
 

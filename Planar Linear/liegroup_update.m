@@ -1,4 +1,4 @@
-function [u_k_Kp1] = liegroup_update(g_k, u_k_K, twist_k, eps_k, f, B, R, S_k, t_k, lambda)
+function [u_k_Kp1] = liegroup_update(g_k, u_k_K, twist_k, eps_k, f, B_func, R, S_k, t_k, lambda)
 %LIEGROUP_UPDATE Summary of this function goes here
 %   Detailed explanation goes here
 arguments (Input)
@@ -7,26 +7,30 @@ arguments (Input)
     twist_k
     eps_k
     f
-    B
+    B_func
     R
     S_k
     t_k
     lambda
 end
 
+B = B_func([], []); % ASSUMING B IS CONSTANT
+
 delta_t = t_k(2) - t_k(1);
 
-i = 1 : (numel(t_k) - 1); % control indices
-
 Y = B * R \ B';
-mu = diff(twist_k, 1, 2) / delta_t ...
-    - f(t_k(i), [g_k(i).element]) ...
-    - B * u_k_K;
+mu = zeros([2, numel(t_k) - 1, size(twist_k, 3)]);
+
+for i = 1 : numel(t_k) - 1
+    mu(:, i, :) = (twist_k(:, i + 1, :) - twist_k(:, i, :)) / delta_t ...
+        - f([g_k(i).element], twist_k(:, i, :)) ...
+        - B * u_k_K(:, i);
+end
 
 % L_k = S_k + 1 / 2 * sum(u_k_K(:, i)' * B' * pagemldivide(Y, (B * u_k_K(:, i) + mu) * delta_t), 3) ...
 %     + 1 / 2 * sum(pagemtimes(pagetranspose(mu), pagemldivide(Y, mu * delta_t)), 3) ...
 %     + lambda * log(prod(sqrt(pagedet(2 * pi * lambda * Y * delta_t)))); % Isn't this term constant
-n = numel(i);
+n = numel(t_k) - 1;
 num_traj = size(g_k, 2);
 L_k = zeros(n, num_traj);
 for j = 1 : numel(t_k)-1 % loop over time
@@ -39,7 +43,7 @@ for j = 1 : numel(t_k)-1 % loop over time
     end
 end 
 
-L_k = cumsum(L_k, 2, "reverse");
+L_k = cumsum(L_k, 1, "reverse");
 L_k = S_k + L_k + lambda * log(cumprod(sqrt(det(2 * pi * lambda * Y * delta_t))));
 
 D = exp(-1 / lambda * L_k);
