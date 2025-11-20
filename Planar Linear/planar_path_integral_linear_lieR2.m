@@ -58,7 +58,8 @@ cost_t = zeros([numel(t_k) - 1, m, iterations]);
 cost_exit = zeros([m, iterations]);
 
 for j = 1 : iterations
-    parfor i = 1 : m
+    for i = 1 : m
+        %[t_k2, x_k2, v_k2, u_k2, delta_u2] = one_step_euler_maruyama_euclidean(f, B, g0, twist0, u_k, t_k, sigma);
         [g_k(:, i), twist_k(:, :, i), delta_u(:, :, i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma);
     end
     
