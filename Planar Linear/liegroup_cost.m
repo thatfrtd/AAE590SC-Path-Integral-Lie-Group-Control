@@ -25,7 +25,7 @@ for i = 1 : numel(g_f)
 end
 twist_error = squeeze(vecnorm(twist_desired - twist_k(:, end, :)));
 
-cost_exit = (group_error + twist_error)';
+cost_exit = (group_error + twist_error*0)';
 
 %% Total Cost
 L = cost_exit * eta + cost_t * (1 - eta);

@@ -8,15 +8,24 @@
 % Most Recent Change: 4 November, 2025
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% Create Dynamics 
 z2 = zeros(2);
 I2 = eye(2);
 
-A = z2;
+%% Define Noise
+noise_delta_t = 1e-2;
 
-% Dynamics are euler-poincare???
-f = @(t, x) A * x;
-B = @(t, x) I2;
+w = @(n) randn([2, n]);
+
+sigma_accel = 1; % [m / s2]
+sigma = [sigma_accel, 0; 0, sigma_accel] * sqrt(noise_delta_t); % need to double check the sqrt(delta t) part
+
+%% Create Dynamics 
+mass = 1;
+J_b = mass; % Generalized inertia
+
+B_map = I2; 
+[f, B] = Euler_Poincare_matrices(R2(), J_b, B_map);
+
 f_with_control = @(t, x, u) [z2, I2; z2, z2] * x + [z2; B(t, x)] * u;
 control_delta_t = 0.01;
 t_k = 0:control_delta_t:1;
@@ -25,7 +34,7 @@ u_k = 0 * ones([2, numel(t_k) - 1]);
 R = eye(2); % ACTUALLY PUT IN COST FUNCTION
 
 %% Define Initial Condition and Target
-x0 = [0; 0; 0; 1];
+x0 = [0; 0; 0; 0];
 xtarg = [1; 0; 0; 0];
 
 g0 = R2(x0(1:2));
@@ -34,14 +43,6 @@ twist0 = x0(3:4);
 gtarg = R2(xtarg(1:2));
 twisttarg = xtarg(3:4);
 
-%% Define Noise
-noise_delta_t = 1e-2;
-
-w = @(n) randn([2, n]);
-
-sigma_accel = 0.4; % [m / s2]
-sigma = [sigma_accel, 0; 0, sigma_accel] * sqrt(noise_delta_t); % need to double check the sqrt(delta t) part
-
 %% Run Monte Carlo
 m = 50;
 
@@ -49,9 +50,9 @@ g_k = createArray(numel(t_k), m, class(g0)); % array of group elements
 twist_k = zeros([g0.dim, numel(t_k)]); % array of twists (body velocities)
 delta_u = zeros([2, numel(t_k) - 1, m]);
 
-iterations = 100;
-lambda = 0.3;
-eta = 0.9; % 0 means only path cost (don't do), 1 means only terminal cost
+iterations = 50;
+lambda = 0.5;
+eta = 1; % 0 means only path cost (don't do), 1 means only terminal cost
 average_cost = zeros([1, iterations]);
 cost_t = zeros([numel(t_k) - 1, m, iterations]);
 cost_exit = zeros([m, iterations]);
@@ -62,22 +63,24 @@ for j = 1 : iterations
     end
     
     [L, cost_t(:, :, j), cost_exit(:, j)] = liegroup_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, eta);
-    u_k = liegroup_update(g_k, u_k, twist_k, delta_u, f, B([], []), R, L, t_k, lambda);
+    u_k = liegroup_update(g_k, u_k, twist_k, delta_u, f, B, R, L, t_k, lambda);
 
     average_cost(j) = sum(L .* control_delta_t, "all") / size(L, 2);
     average_cost(j)
 
-    if mod(j, 50) == 0 || j == 1
+    if mod(j, 10) == 0 || j == 1
         figure
-        x = [g_k.element];
-        plot(squeeze(x(1, :)), squeeze(x(2, :))); hold on
-        scatter(xtarg(1), xtarg(2));
+        x = [g_k(2:end, :).element];
+        colormap(jet);  
+        scatter(squeeze(x(1, :)), squeeze(x(2, :)), [], L(:), "filled"); hold on
+        %scatter(xtarg(1), xtarg(2));
         xlabel("X [m]")
         ylabel("Y [m]")
         title("Trajectory")
         subtitle(sprintf("Iteration %d, avg cost %.3f", j, average_cost(j)))
         grid on
         axis equal
+        colorbar
     end
 end
 
@@ -147,9 +150,9 @@ axis equal
 %% Iterations
 figure
 plot(average_cost); hold on
-scatter(1 : iterations, cost_t, MarkerFaceColor = [192, 192, 192] / 256, MarkerEdgeColor="none", HandleVisibility="off")
+scatter(1 : iterations, squeeze(sum(cost_t, 1)), MarkerFaceColor = [192, 192, 192] / 256, MarkerEdgeColor="none", HandleVisibility="off")
 scatter(1 : iterations, cost_exit, MarkerFaceColor = [192, 192, 192] / 256, MarkerEdgeColor="none", HandleVisibility="off")
-plot(mean(cost_t, 1), Color = "b");
+plot(mean(squeeze(sum(cost_t, 1)), 1), Color = "b");
 plot(mean(cost_exit, 1), Color = "r");
 grid on
 legend("Total Cost", "Path Cost", "Exit Cost")

@@ -30,7 +30,7 @@ classdef Group
         obj = inv_cayley(obj, X)
 
         obj = Ad(X)
-        obj = ad(x)
+        obj = ad(x, twist)
     end
 
     methods
