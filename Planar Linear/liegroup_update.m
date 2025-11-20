@@ -51,5 +51,5 @@ D = reshape(D ./ sum(D, 2), 1, n, num_traj);
 
 D_expec = sum(D .* eps_k * sqrt(delta_t), 3);
 
-u_k_Kp1 = pagemtimes(R \ B' * Y \ B, u_k_K * delta_t + D_expec);
+u_k_Kp1 = pagemtimes(R \ B' * Y \ B, u_k_K * delta_t + D_expec) / delta_t;
 end

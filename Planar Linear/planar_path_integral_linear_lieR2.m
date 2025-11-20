@@ -51,31 +51,34 @@ delta_u = zeros([2, numel(t_k) - 1, m]);
 w_k = zeros([2, numel(t_k) - 1, m]);
 
 
-iterations = 50;
-lambda = 0.5;
+iterations = 200;
+lambda = 1;
 eta = 1; % 0 means only path cost (don't do), 1 means only terminal cost
 average_cost = zeros([1, iterations]);
 cost_t = zeros([numel(t_k) - 1, m, iterations]);
 cost_exit = zeros([m, iterations]);
 
 for j = 1 : iterations
-    for i = 1 : m
-        [t_k2, x_k2, v_k2, u_k2, delta_u2, w_k] = one_step_euler_maruyama_euclidean(@(t,x)0, B, u_k, sigma, t_k, x0(1:2), x0(3:4));
+    parfor i = 1 : m
+        %[t_k2, x_k2, v_k2, u_k2, delta_u2, w_k] = one_step_euler_maruyama_euclidean(@(t,x)0, B, u_k, sigma, t_k, x0(1:2), x0(3:4));
 
-        [g_k(:, i), twist_k(:, :, i), delta_u(:, :, i), w_k(:,:,i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma, w_k = w_k);
+        [g_k(:, i), twist_k(:, :, i), delta_u(:, :, i), w_k(:,:,i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma);
     end
     
     [L, cost_t(:, :, j), cost_exit(:, j)] = liegroup_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, eta);
-    u_k = liegroup_update(g_k, u_k, twist_k, w_k, f, B, R, L, t_k, lambda);
+    u_k = liegroup_update(g_k, u_k, twist_k, delta_u, f, B, R, L, t_k, lambda);
 
     average_cost(j) = sum(L .* control_delta_t, "all") / size(L, 2);
     average_cost(j)
 
     if mod(j, 10) == 0 || j == 1
+        [t_opt, x_opt, ~, delta_u_opt] = sode45(f_with_control, u_k, sigma, w, t_k, noise_delta_t, x0, tolerances);
+
         figure
         x = [g_k(2:end, :).element];
         colormap(jet);  
         scatter(squeeze(x(1, :)), squeeze(x(2, :)), [], L(:), "filled"); hold on
+        plot(x_opt(1, :), x_opt(2, :));
         %scatter(xtarg(1), xtarg(2));
         xlabel("X [m]")
         ylabel("Y [m]")
