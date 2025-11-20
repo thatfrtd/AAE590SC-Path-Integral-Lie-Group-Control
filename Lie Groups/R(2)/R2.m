@@ -58,7 +58,7 @@ classdef R2 < Group
         end
 
         function val = ad(X, twist)
-            val = eye(X.dim);
+            val = zeros(X.dim);
         end
 
         function X = cayley(G, tau)
