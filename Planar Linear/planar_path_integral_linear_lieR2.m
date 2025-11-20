@@ -16,7 +16,7 @@ noise_delta_t = 1e-2;
 
 w = @(n) randn([2, n]);
 
-sigma_accel = 10; % [m / s2]
+sigma_accel = 0.1; % [m / s2]
 sigma = [sigma_accel, 0; 0, sigma_accel] * sqrt(noise_delta_t); % need to double check the sqrt(delta t) part
 
 %% Create Dynamics 
@@ -48,6 +48,8 @@ m = 50;
 g_k = createArray(numel(t_k), m, class(g0)); % array of group elements
 twist_k = zeros(g0.dim, numel(t_k), m); % array of twists (body velocities)
 delta_u = zeros([2, numel(t_k) - 1, m]);
+w_k = zeros([2, numel(t_k) - 1, m]);
+
 
 iterations = 50;
 lambda = 0.5;
@@ -60,11 +62,11 @@ for j = 1 : iterations
     for i = 1 : m
         [t_k2, x_k2, v_k2, u_k2, delta_u2, w_k] = one_step_euler_maruyama_euclidean(@(t,x)0, B, u_k, sigma, t_k, x0(1:2), x0(3:4));
 
-        [g_k(:, i), twist_k(:, :, i), delta_u(:, :, i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma, w_k = w_k);
+        [g_k(:, i), twist_k(:, :, i), delta_u(:, :, i), w_k(:,:,i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma, w_k = w_k);
     end
     
     [L, cost_t(:, :, j), cost_exit(:, j)] = liegroup_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, eta);
-    u_k = liegroup_update(g_k, u_k, twist_k, delta_u, f, B, R, L, t_k, lambda);
+    u_k = liegroup_update(g_k, u_k, twist_k, w_k, f, B, R, L, t_k, lambda);
 
     average_cost(j) = sum(L .* control_delta_t, "all") / size(L, 2);
     average_cost(j)
