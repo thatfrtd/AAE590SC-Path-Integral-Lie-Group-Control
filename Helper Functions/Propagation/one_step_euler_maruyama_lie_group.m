@@ -17,6 +17,7 @@ w_k = options.w_k;
 delta_t = t_k(2) - t_k(1);
 
 g_k = createArray(1, numel(t_k), class(g_0)); % array of group elements
+g_k(1) = g_0;
 twist_k = zeros([g_0.dim, numel(t_k)]); % array of twists (body velocities)
 delta_u = zeros([size(u_k, 1), numel(t_k) - 1]);
 twist_k(:, 1) = twist_0;
@@ -25,6 +26,6 @@ twist_k(:, 1) = twist_0;
 for i = 1 : (numel(t_k) - 1)
     g_k(i + 1) = g_k(i).rplus(twist_k(:, i) * delta_t); % reconstruction equation
     delta_u(:, i) = sigma / sqrt(delta_t) * w_k(:, i);
-    twist_k(:, i + 1) = twist_k(:, i) + f(g_k(i).element, twist_k(:, i)) * delta_t + B(t_k(i), g_k(:, i)) * (u_k(:, i) + delta_u(:, i)) * delta_t;
+    twist_k(:, i + 1) = twist_k(:, i) + f(g_k(i), twist_k(:, i)) * delta_t + B(t_k(i), g_k(:, i)) * (u_k(:, i) + delta_u(:, i)) * delta_t;
 end
 end

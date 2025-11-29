@@ -11,12 +11,14 @@
 z2 = zeros(2);
 I2 = eye(2);
 
+tolerances = odeset(RelTol=1e-12, AbsTol=1e-12);
+
 %% Define Noise
 noise_delta_t = 1e-2;
 
 w = @(n) randn([2, n]);
 
-sigma_accel = 0.1; % [m / s2]
+sigma_accel = 0.5; % [kg m / s2]
 sigma = [sigma_accel, 0; 0, sigma_accel] * sqrt(noise_delta_t); % need to double check the sqrt(delta t) part
 
 %% Create Dynamics 
@@ -31,10 +33,9 @@ control_delta_t = 0.01;
 t_k = 0:control_delta_t:1;
 u_k = 0 * ones([2, numel(t_k) - 1]);
 
-R = eye(2); % ACTUALLY PUT IN COST FUNCTION
 
 %% Define Initial Condition and Target
-x0 = [0; 0; 0; 0];
+x0 = [0; 0; 0; 1];
 xtarg = [1; 0; 0; 0];
 g0 = R2(x0(1:2));
 twist0 = x0(3:4);
@@ -51,33 +52,37 @@ delta_u = zeros([2, numel(t_k) - 1, m]);
 w_k = zeros([2, numel(t_k) - 1, m]);
 
 
-iterations = 200;
-lambda = 1;
-eta = 1; % 0 means only path cost (don't do), 1 means only terminal cost
+iterations = 250;
+R = eye(2);
+S_g = 1000 * eye(2);
+S_twist = 250 * eye(2);
+lambda_matrix = sigma * sigma' * R;
+lambda = lambda_matrix(1) * 100;
 average_cost = zeros([1, iterations]);
 cost_t = zeros([numel(t_k) - 1, m, iterations]);
 cost_exit = zeros([m, iterations]);
-
 for j = 1 : iterations
     parfor i = 1 : m
-        %[t_k2, x_k2, v_k2, u_k2, delta_u2, w_k] = one_step_euler_maruyama_euclidean(@(t,x)0, B, u_k, sigma, t_k, x0(1:2), x0(3:4));
+        % [t_k2, x_k2, v_k2, u_k2, delta_u2, w_k] = one_step_euler_maruyama_euclidean(@(t,x)0, B, u_k, sigma, t_k, x0(1:2), x0(3:4));
 
         [g_k(:, i), twist_k(:, :, i), delta_u(:, :, i), w_k(:,:,i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma);
     end
     
-    [L, cost_t(:, :, j), cost_exit(:, j)] = liegroup_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, eta);
-    u_k = liegroup_update(g_k, u_k, twist_k, delta_u, f, B, R, L, t_k, lambda);
+    [L, cost_t(:, :, j), cost_exit(:, j)] = liegroup_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, R, S_g = S_g, S_twist = S_twist);
 
-    average_cost(j) = sum(L .* control_delta_t, "all") / size(L, 2);
+    [u_k, D_k, L_k] = liegroup_update(g_k, u_k, twist_k, pagemtimes(sigma, w_k), f, B, R, L, t_k, lambda);
+
+    average_cost(j) = sum(L_k, "all") / numel(L_k);
     average_cost(j)
 
-    if mod(j, 10) == 0 || j == 1
+    if mod(j, 30) == 0 || j == 1
         [t_opt, x_opt, ~, delta_u_opt] = sode45(f_with_control, u_k, sigma, w, t_k, noise_delta_t, x0, tolerances);
 
         figure
         x = [g_k(2:end, :).element];
         colormap(jet);  
-        scatter(squeeze(x(1, :)), squeeze(x(2, :)), [], L(:), "filled"); hold on
+        scatter(squeeze(x(1, :)), squeeze(x(2, :)), [], D_k(:), "filled"); hold on
+        alpha(D_k(:));
         plot(x_opt(1, :), x_opt(2, :));
         %scatter(xtarg(1), xtarg(2));
         xlabel("X [m]")
@@ -101,7 +106,6 @@ x = zeros([4, numel(t_k), m]);
 t = zeros([numel(t_k), m]);
 delta_u = zeros([2, numel(t_k) - 1, m]);
 
-tolerances = odeset(RelTol=1e-12, AbsTol=1e-12);
 for i = 1 : m
     [t(:, i), x(:, :, i), ~, delta_u(:, :, i)] = sode45(f_with_control, u_k, sigma, w, t_k, noise_delta_t, x0, tolerances);
 end
@@ -144,9 +148,13 @@ title("Control Acceleration vs Time")
 grid on
 
 %% Trajectory
+[g_nom, twist_k_nom] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma * 0);
+x_g_nom = [g_nom.element];
+
 figure
 plot(squeeze(x(1, :, :)), squeeze(x(2, :, :)), Color = [192, 192, 192] / 256, HandleVisibility="off"); hold on
 plot(squeeze(x_nom(1, :)), squeeze(x_nom(2, :)), Color = "r")
+plot(squeeze(x_g_nom(1, :)), squeeze(x_g_nom(2, :)), Color = "g")
 xlabel("X [m]")
 ylabel("Y [m]")
 title("Trajectory")
@@ -165,3 +173,4 @@ legend("Total Cost", "Path Cost", "Exit Cost")
 xlabel("Iteration")
 ylabel("Cost")
 title("Cost vs Iteration")
+yscale("log")
