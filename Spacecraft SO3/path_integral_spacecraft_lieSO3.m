@@ -49,7 +49,7 @@ S_g = 1.7e6 * eye(G.dim);
 S_twist = 8e4*0 * eye(G.dim);
 
 
-%% Define Initial Condition and Target
+%% Define Initial Condition and Ta rget
 g0 = SO3_RotationMatrix(angle2dcm(0.1, 1, 0.4)); % Initial DCM
 twist0 = [0; 1; 0]; % Initial angular velocity
 xtarg = G.identity;

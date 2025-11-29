@@ -35,8 +35,15 @@ noise_delta_t = 1e-2;
 
 w = @(n) randn([2, n]);
 
-sigma_accel = 0.2; % [m / s2]
+sigma_accel = 0.5; % [m / s2]
 sigma = [sigma_accel, 0; 0, sigma_accel] * sqrt(noise_delta_t); % need to double check the sqrt(delta t) part
+
+%% Define Obstacles
+obstacle_center = [0.6; 0.1];
+obstacle_radius = 0.3;
+obstacle_penalty = 1e1;
+logistic = @(x) 1e4 ./ (1 + exp(-1000*x)); % Smooth out penalty
+state_running_cost = @(x, v) obstacle_penalty * logistic(obstacle_radius - norm(x - obstacle_center));
 
 %% Run Monte Carlo
 m = 100;
@@ -50,14 +57,15 @@ delta_u = zeros([2, numel(t_k) - 1, m]);
 tolerances = odeset(RelTol=1e-4, AbsTol=1e-4, InitialStep=0.1, MaxStep=0.1);
 
 iterations = 300;
-R = eye(2) * 0.1;
-S_x = 10 * eye(2);
-S_v = 2.5 * eye(2);
+R = eye(2) * 0.06;
+S_x = 60 * eye(2);
+S_v = 15 * eye(2);
 lambda_matrix = sigma * sigma' * R;
 lambda = lambda_matrix(1)*100;
 average_cost = zeros([1, iterations]);
 cost_t = zeros([m, iterations]);
 cost_exit = zeros([m, iterations]);
+
 %%
 for j = 1 : iterations
     if integration_method == "ode45"
@@ -72,7 +80,7 @@ for j = 1 : iterations
         end
     end
     
-    [L, cost_t(:, j), cost_exit(:, j)] = euclidean_cost(x, v, xtarg, vtarg, u_n + delta_u, control_delta_t, R, S_x = S_x, S_v = S_v);
+    [L, cost_t(:, j), cost_exit(:, j)] = euclidean_cost(x, v, xtarg, vtarg, u_n + delta_u, control_delta_t, R, S_x = S_x, S_v = S_v, state_running_cost = state_running_cost);
     
     u_k = euclidean_update(u_k, delta_u, L, lambda);
 
@@ -88,6 +96,7 @@ for j = 1 : iterations
         L_flat = repmat(L', 101, 1);
         scatter(squeeze(x(1, :)), squeeze(x(2, :)), [], L_flat(:), "filled"); hold on
         plot(squeeze(x_new(1, :)), squeeze(x_new(2, :)), LineStyle="--", LineWidth=1, Color="r"); hold on
+        plot(obstacle_radius * cos(0:0.01:2 * pi) + obstacle_center(1), obstacle_radius * sin(0:0.01:2 * pi) + obstacle_center(2), LineWidth=1,Color="k")
         scatter(xtarg(1), xtarg(2));
         xlabel("X [m]")
         ylabel("Y [m]")
@@ -101,7 +110,7 @@ end
 
 
 %% Time Histories
-sigma_accel = 0.2; % [m / s2]
+sigma_accel = 0.3; % [m / s2]
 sigma = [sigma_accel, 0; 0, sigma_accel] * sqrt(noise_delta_t); % need to double check the sqrt(delta t) part
 
 m = 50;
@@ -168,6 +177,7 @@ nexttile
 plot(squeeze(x(1, :, :)), squeeze(x(2, :, :)), Color = [192, 192, 192] / 256, HandleVisibility="off"); hold on
 plot(squeeze(x_nom(1, :)), squeeze(x_nom(2, :)), Color = "r")
 plot(squeeze(x2(1, :)), squeeze(x2(2, :)), Color = "b", LineStyle="--")
+plot(obstacle_radius * cos(0:0.01:2 * pi) + obstacle_center(1), obstacle_radius * sin(0:0.01:2 * pi) + obstacle_center(2), LineWidth=1,Color="k")
 xlabel("X [m]")
 ylabel("Y [m]")
 title("Position Trajectory")
