@@ -5,7 +5,7 @@ arguments
     f
     B
     u_k
-    sigma % pre multiplied by delta t to match SODE45...
+    sigma % pre multiplied by sqrt(delta t) to match SODE45...
     t_k
     x0
     v0

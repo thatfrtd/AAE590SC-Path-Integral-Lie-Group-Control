@@ -11,6 +11,7 @@ arguments
     options.S_v = eye(size(vtraj, 1))
     options.diff_multiplier = 0
     options.state_running_cost = @(x, v) 0
+    options.P_k = []
 end
 
 % Exit Cost
@@ -29,7 +30,11 @@ cost_control_t = squeeze(sum(dot(u_traj, pagemtimes(R, u_traj))) * dt) + diff_co
 cost_state_t = zeros(size(xtraj, 2:3));
 for i = 1 : size(xtraj, 2)
     for j = 1 : size(xtraj, 3)
-        cost_state_t(i, j) = options.state_running_cost(xtraj(:, i, j), vtraj(:, i, j));
+        if isempty(options.P_k)
+            cost_state_t(i, j) = options.state_running_cost(xtraj(:, i, j), vtraj(:, i, j));
+        else 
+            cost_state_t(i, j) = options.state_running_cost(xtraj(:, i, j), vtraj(:, i, j), options.P_k(:, :, i, j));
+        end
     end
 end
 cost_state_t = sum(cost_state_t, 1)';

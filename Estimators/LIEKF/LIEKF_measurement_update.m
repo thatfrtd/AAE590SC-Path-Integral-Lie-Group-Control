@@ -14,8 +14,8 @@ Sigma_hat_l_plus = (eye(n) - L * H) * Sigma_hat_l_minus;
 
 % Covariance of error needs to be updated now that the new orientation
 % error is with respect to the new nominal orientation
-G = blkdiag(eye(3) - 1 / 2 * skew(-delta_X(1:3)), eye(6));
-Sigma_hat_l_plus = G * Sigma_hat_l_plus * G';
+% G = blkdiag(eye(3) - 1 / 2 * skew(-delta_X(1:3)), eye(6));
+% Sigma_hat_l_plus = G * Sigma_hat_l_plus * G';
 
 err_l_before = norm(left_invariant_error(X_true, X_hat_minus))
 err_l_after = norm(left_invariant_error(X_true, X_hat_plus))
