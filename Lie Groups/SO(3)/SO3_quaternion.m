@@ -54,13 +54,6 @@ classdef SO3_quaternion < SO3
             theta = tau(1:3);
             tau_hat = [0; theta / 2];
         end
-
-        function X = Exp(G, tau)
-            theta = norm(tau);
-            u = tau / theta;
-            q = [u * sin(theta / 2); cos(theta / 2)];
-            X = SO3_quaternion(q);
-        end
         function tau = Log(X)
             w = X.w * sign(X.w);
             v = X.v * sign(X.w);
@@ -74,6 +67,19 @@ classdef SO3_quaternion < SO3
         end
         function tau = inv_cayley(X)
             
+        end
+    end
+
+    methods (Static)
+        function X = Exp(tau)
+            theta = norm(tau);
+            if theta ~= 0
+                u = tau / theta;
+            else
+                u = [1; 0; 0];
+            end
+            q = [u * sin(theta / 2); cos(theta / 2)];
+            X = SO3_quaternion(q);
         end
     end
 end

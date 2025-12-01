@@ -17,7 +17,7 @@ I2 = eye(2);
 A = [z2, I2; z2, z2];
 B = [z2; I2];
 
-f = @(t, x, u) A * x + B * u;
+f = @(t, x, u) pagemtimes(A, x) + pagemtimes(B, u);
 control_delta_t = 0.01;
 t_k = 0:control_delta_t:1;
 u_k = 0 * ones([2, numel(t_k) - 1]);
@@ -38,35 +38,27 @@ w = @(n) randn([2, n]);
 sigma_accel = 0.5; % [m / s2]
 sigma = [sigma_accel, 0; 0, sigma_accel] * sqrt(noise_delta_t); % need to double check the sqrt(delta t) part
 
-%% Define Obstacles
-obstacle_center = [0.6; 0.1];
-obstacle_radius = 0.3;
-obstacle_penalty = 1e1;
-logistic = @(x) 1e4 ./ (1 + exp(-1000*x)); % Smooth out penalty
-state_running_cost = @(x, v) obstacle_penalty * logistic(obstacle_radius - norm(x - obstacle_center));
-
 %% Run Monte Carlo
-m = 100;
+m = 50;
 
 x = zeros([2, numel(t_k), m]);
 v = zeros([2, numel(t_k), m]);
 t = zeros([numel(t_k), m]);
-u_n = zeros([2, numel(t_k) - 1, m]);
+u_n = zeros([2, numel(t_k) - 1]);
 delta_u = zeros([2, numel(t_k) - 1, m]);
 
 tolerances = odeset(RelTol=1e-4, AbsTol=1e-4, InitialStep=0.1, MaxStep=0.1);
 
-iterations = 300;
-R = eye(2) * 0.06;
-S_x = 60 * eye(2);
-S_v = 15 * eye(2);
+iterations = 210;
+R = eye(2) * 1;
+S_x = 800 * eye(2);
+S_v = 200 * eye(2);
 lambda_matrix = sigma * sigma' * R;
 lambda = lambda_matrix(1)*100;
 average_cost = zeros([1, iterations]);
 cost_t = zeros([m, iterations]);
 cost_exit = zeros([m, iterations]);
-
-%%
+cost_state = zeros([numel(t_k) - 1, m]);
 for j = 1 : iterations
     if integration_method == "ode45"
         for i = 1 : m
@@ -75,16 +67,17 @@ for j = 1 : iterations
             v(:, :, i) = x_full(3:4, :);
         end
     elseif integration_method == "oneeuler"
-        for i = 1 : m
-            [t(:, i), x(:, :, i), v(:, :, i), u_n(:, :, i), delta_u(:, :, i)] = one_step_euler_maruyama_euclidean(f_func, B_func, u_k, sigma, t_k, x0, v0);
+        parfor i = 1 : m
+            [t(:, i), x(:, :, i), v(:, :, i), ~, delta_u(:, :, i)] = one_step_euler_maruyama_euclidean(f_func, B_func, u_k, sigma, t_k, x0, v0);
         end
     end
     
-    [L, cost_t(:, j), cost_exit(:, j)] = euclidean_cost(x, v, xtarg, vtarg, u_n + delta_u, control_delta_t, R, S_x = S_x, S_v = S_v, state_running_cost = state_running_cost);
-    
-    u_k = euclidean_update(u_k, delta_u, L, lambda);
+    [L, cost_t(:, j), cost_exit(:, j)] = iterative_euclidean_cost(x, v, xtarg, vtarg, u_k + delta_u, control_delta_t, R, S_x = S_x, S_v = S_v);
 
-    average_cost(j) = sum(L) / numel(L);
+    %u_k = euclidean_update(u_k, delta_u, L, lambda);
+    [u_k, L_new, L_raw] = iterative_euclidean_update(x, v, v * 0, B(3:4, :), u_k, delta_u, lambda, R, control_delta_t, cost_exit(:, j), cost_state);
+
+    average_cost(j) = sum(L_raw,"all") / numel(L_raw);
     average_cost(j)
 
     if mod(j, 30) == 0 || j == 1
@@ -93,10 +86,11 @@ for j = 1 : iterations
         figure
         %plot(squeeze(x(1, :, :)), squeeze(x(2, :, :))); hold on
         colormap(jet);  
-        L_flat = repmat(L', 101, 1);
-        scatter(squeeze(x(1, :)), squeeze(x(2, :)), [], L_flat(:), "filled"); hold on
+        %L_flat = repmat(L_new', 101, 1);
+        L_new = [L_new; L_new(end, :)];
+        scatter(squeeze(x(1, :)), squeeze(x(2, :)), [], L_new(:), "filled"); hold on
+        alpha(L_new(:))
         plot(squeeze(x_new(1, :)), squeeze(x_new(2, :)), LineStyle="--", LineWidth=1, Color="r"); hold on
-        plot(obstacle_radius * cos(0:0.01:2 * pi) + obstacle_center(1), obstacle_radius * sin(0:0.01:2 * pi) + obstacle_center(2), LineWidth=1,Color="k")
         scatter(xtarg(1), xtarg(2));
         xlabel("X [m]")
         ylabel("Y [m]")
@@ -110,7 +104,7 @@ end
 
 
 %% Time Histories
-sigma_accel = 0.3; % [m / s2]
+sigma_accel = 0.2; % [m / s2]
 sigma = [sigma_accel, 0; 0, sigma_accel] * sqrt(noise_delta_t); % need to double check the sqrt(delta t) part
 
 m = 50;
@@ -130,7 +124,7 @@ end
 x_nom = x2_nom(1:2, :);
 v_nom = x2_nom(3:4, :);
 %%
-[t2, x2, v2, u_n2, delta_u2] = one_step_euler_maruyama_euclidean(f_func, B_func, u_k, sigma*0, t_k, x0, v0);
+[t2, x2, v2, u_n2, delta_u2] = one_step_euler_maruyama_euclidean(f_func, B_func, u_k, sigma, t_k, x0, v0);
 
 %%
 figure
@@ -177,7 +171,6 @@ nexttile
 plot(squeeze(x(1, :, :)), squeeze(x(2, :, :)), Color = [192, 192, 192] / 256, HandleVisibility="off"); hold on
 plot(squeeze(x_nom(1, :)), squeeze(x_nom(2, :)), Color = "r")
 plot(squeeze(x2(1, :)), squeeze(x2(2, :)), Color = "b", LineStyle="--")
-plot(obstacle_radius * cos(0:0.01:2 * pi) + obstacle_center(1), obstacle_radius * sin(0:0.01:2 * pi) + obstacle_center(2), LineWidth=1,Color="k")
 xlabel("X [m]")
 ylabel("Y [m]")
 title("Position Trajectory")
@@ -196,13 +189,14 @@ axis equal
 
 %% Iterations
 figure
-plot(average_cost); hold on
+hold on
 scatter(1 : iterations, cost_t, MarkerFaceColor = [192, 192, 192] / 256, MarkerEdgeColor="none", HandleVisibility="off")
 scatter(1 : iterations, cost_exit, MarkerFaceColor = [192, 192, 192] / 256, MarkerEdgeColor="none", HandleVisibility="off")
 plot(mean(cost_t, 1), Color = "b");
 plot(mean(cost_exit, 1), Color = "r");
+plot(average_cost, Color = "m"); 
 grid on
-legend("Total Cost", "Path Cost", "Exit Cost")
+legend("Path Cost", "Exit Cost", "Average Cost")
 xlabel("Iteration")
 ylabel("Cost")
 title("Cost vs Iteration")

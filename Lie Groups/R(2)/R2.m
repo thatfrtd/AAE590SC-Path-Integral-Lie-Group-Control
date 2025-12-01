@@ -57,15 +57,17 @@ classdef R2 < Group
             val = eye(X.dim);
         end
 
-        function val = ad(X, twist)
-            val = eye(X.dim);
-        end
-
         function X = cayley(G, tau)
             
         end
         function tau = inv_cayley(X)
             
+        end
+    end
+    
+    methods (Static)
+        function val = ad(X, twist)
+            val = zeros(X.dim);
         end
     end
 end

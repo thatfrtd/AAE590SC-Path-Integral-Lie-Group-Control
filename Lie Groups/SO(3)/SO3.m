@@ -29,7 +29,7 @@ classdef SO3 < Group
             % Lie algebra adjoint (Lie Bracket)
             % The derivative of Ad at identity
             % Always G.hat()?
-            adjoint = G.hat(twist);
+            adjoint = G.hat(twist).element;
         end
 
         function val = J_r(phi)

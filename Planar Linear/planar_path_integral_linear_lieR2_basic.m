@@ -59,7 +59,8 @@ S_twist = 250 * eye(2);
 lambda_matrix = sigma * sigma' * R;
 lambda = lambda_matrix(1) * 100;
 average_cost = zeros([1, iterations]);
-cost_t = zeros([numel(t_k) - 1, m, iterations]);
+%cost_t = zeros([numel(t_k) - 1, m, iterations]);
+cost_t = zeros([m, 1, iterations]);
 cost_exit = zeros([m, iterations]);
 for j = 1 : iterations
     parfor i = 1 : m
@@ -68,9 +69,12 @@ for j = 1 : iterations
         [g_k(:, i), twist_k(:, :, i), delta_u(:, :, i), w_k(:,:,i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma);
     end
     
-    [L, cost_t(:, :, j), cost_exit(:, j)] = liegroup_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, R, S_g = S_g, S_twist = S_twist);
+    %[L, cost_t(:, :, j), cost_exit(:, j)] = liegroup_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, R, S_g = S_g, S_twist = S_twist);
+    [L_k, cost_t(:, :, j), cost_exit(:, j)] = basic_Lie_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, R, S_g = S_g, S_twist = S_twist);
 
-    [u_k, D_k, L_k] = liegroup_update(g_k, u_k, twist_k, pagemtimes(sigma, w_k), f, B, R, L, t_k, lambda);
+    %[u_k, D_k, L_k] = liegroup_update(g_k, u_k, twist_k, pagemtimes(sigma, w_k), f, B, R, L, t_k, lambda);
+    [u_k, D_k] = euclidean_update(u_k, delta_u, L_k, lambda);
+    D_k = repmat(D_k', numel(t_k) - 1, 1);
 
     average_cost(j) = sum(L_k, "all") / numel(L_k);
     average_cost(j)

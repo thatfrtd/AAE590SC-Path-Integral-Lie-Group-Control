@@ -81,7 +81,10 @@ classdef SE3_RotationMatrix
                        0, 0, 0, X.R];
         end
         function adjoint = ad(obj, x)
+            w = x(4:6);
+            v = x(1:3);
 
+            adjoint = [skew(w), zeros(3,3); skew(v), skew(w)];
         end
 
         function val = V(theta_mag, theta_dir)

@@ -1,11 +1,11 @@
-function [t_k, x_k, v_k, u_k, delta_u] = one_step_euler_maruyama_euclidean(f, B, u_k, sigma, t_k, x0, v0)
+function [t_k, x_k, v_k, u_k, delta_u, w_k] = one_step_euler_maruyama_euclidean(f, B, u_k, sigma, t_k, x0, v0)
 %ONE_STEP_EULER_MARUYAMA_EUCLIDEAN Summary of this function goes here
 %   Detailed explanation goes here
 arguments
     f
     B
     u_k
-    sigma % pre multiplied by delta t to match SODE45...
+    sigma % pre multiplied by sqrt(delta t) to match SODE45...
     t_k
     x0
     v0

@@ -11,6 +11,9 @@ classdef SO3_RotationMatrix < SO3
     
     methods
         function obj = SO3_RotationMatrix(R)
+            arguments
+                R = eye(3)
+            end
             %SO3_ROTATIONMATRIX Construct an instance of this class
             %   Detailed explanation goes here
             obj.element = R;
@@ -41,12 +44,17 @@ classdef SO3_RotationMatrix < SO3
         end
         function tau_hat = hat(G, tau)
             theta = tau(1:3);
-            tau_hat = skew(theta);
+            tau_hat = G;
+            tau_hat.element = skew(theta); 
         end
 
         function tau = Log(X)
             theta = acos((trace(X.R) - 1) / 2);
-            tau = theta * X.vee(X.R - X.R') / (2 * sin(theta));
+            if theta ~= 0
+                tau = theta * X.vee(X.R - X.R') / (2 * sin(theta));
+            else
+                tau = zeros([3, 1]);
+            end
         end
 
         function X = cayley(G, tau)
@@ -62,7 +70,11 @@ classdef SO3_RotationMatrix < SO3
     methods(Static)
         function X = Exp(tau)
             theta = norm(tau);
-            u = tau / theta;
+            if theta ~= 0
+                u = tau / theta;
+            else
+                u = [1; 0; 0];
+            end
             R = eye(3) + sin(theta) * skew(u) + (1 - cos(theta)) * skew(u) ^ 2;
             X = SO3_RotationMatrix(R);
         end
