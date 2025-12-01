@@ -13,14 +13,14 @@ G = SO3_RotationMatrix();
 z = zeros(G.dim);
 I = eye(G.dim);
 
-tolerances = odeset(RelTol=1e-12, AbsTol=1e-12);
+tolerances = odeset(RelTol=1e-6, AbsTol=1e-6);
 
 %% Define Noise
 noise_delta_t = 1e-2;
 
 w = @(n) randn([G.dim, n]);
 
-sigma_dist = 0.1; % [kg m2 / s2]
+sigma_dist = 0.03; % [kg m2 / s2]
 sigma = [sigma_dist, 0, 0; 0, sigma_dist, 0; 0, 0, sigma_dist]; % need to double check the sqrt(delta t) part
 
 %% Create Dynamics 
@@ -35,9 +35,9 @@ control_delta_t = 0.01;
 t_k = 0:control_delta_t:1.8;
 u_k = 0 * ones([G.dim, numel(t_k) - 1]);
 
-R = eye(G.dim)*0.1;
-S_g = 1.6e6 * eye(G.dim);
-S_twist = 8e3 * eye(G.dim);
+R = eye(G.dim);
+S_g = 1.6e9 * eye(G.dim);
+S_twist = 8e8 * eye(G.dim);
 
 %% Define Initial Condition and Target
 g0 = SO3_RotationMatrix(angle2dcm(0, deg2rad(0), deg2rad(0))); % Initial DCM
@@ -47,7 +47,7 @@ gtarg = SO3_RotationMatrix(angle2dcm(0, deg2rad(30), deg2rad(30))'); % Target DC
 twisttarg = zeros([3, 1]);
 
 %% Run Monte Carlo
-m = 200;
+m = 40;
 
 g_k = createArray(numel(t_k), m, class(g0)); % array of group elements
 twist_k = zeros(G.dim, numel(t_k), m); % array of twists (body velocities)
@@ -55,24 +55,29 @@ delta_u = zeros([G.dim, numel(t_k) - 1, m]);
 w_k = zeros([G.dim, numel(t_k) - 1, m]);
 
 
-iterations = 80;
+iterations = 40;
 lambda_matrix = sigma * sigma' * R;
-lambda = lambda_matrix(1) * 100;
+lambda = lambda_matrix(1);
 average_cost = zeros([1, iterations]);
 cost_t = zeros([numel(t_k) - 1, m, iterations]);
 cost_exit = zeros([m, iterations]);
 for j = 1 : iterations
+    %[g_k(:, 1), twist_k(:, :, 1), delta_u(:, :, 1), w_k(:,:,1)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma*0);
+    %[~, g_k(:, 1), twist_k(:, :, 1), ~, delta_u(:, :, 1)] = sode45_liegroup(u_k, sigma*0, w, t_k, noise_delta_t, g0, twist0, J_b, tolerances);
     parfor i = 1 : m
+        %[~, g_k(:, i), twist_k(:, :, i), ~, delta_u(:, :, i)] = sode45_liegroup(u_k, sigma, w, t_k, noise_delta_t, g0, twist0, J_b, tolerances);
         [g_k(:, i), twist_k(:, :, i), delta_u(:, :, i), w_k(:,:,i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma);
     end
     
-    [L, cost_t(:, :, j), cost_exit(:, j)] = liegroup_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, R*0, S_g = S_g, S_twist = S_twist);
-    [u_k, D_k] = liegroup_update(g_k, u_k, twist_k, pagemtimes(sigma, w_k), f, B, R, L, t_k, lambda);
+    [L, cost_t(:, :, j), cost_exit(:, j)] = liegroup_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, R, S_g = S_g, S_twist = S_twist);
+%    [u_k, D_k] = liegroup_update(g_k, u_k, twist_k, pagemtimes(sigma, w_k), f, B, R, L, t_k, lambda);
+    u_km1 = u_k;
+    [u_k, D_k] = liegroup_update(g_k, u_k, twist_k, delta_u, f, B, R, L, t_k, lambda);
 
     average_cost(j) = min(sum(L .* control_delta_t, 1), [], "all");
     average_cost(j)
 
-    if mod(j, 25) == 0 || j == 1
+    if mod(j, 20) == 0 || j == 1
         %[t_opt, x_opt, ~, delta_u_opt] = sode45(f_with_control, u_k, sigma, w, t_k, noise_delta_t, x0, tolerances);
 
         figure
@@ -148,10 +153,11 @@ for j = 1 : iterations
         title("")
 
         % Control
-        u_k_m = u_k + delta_u;
+        u_k_m = u_km1 + delta_u;
 
         nexttile([1,4])
         scatter(repmat(t_k(2:end), 1, m), squeeze(u_k_m(1, :)), [], L(:), "filled"); hold on
+        scatter(t_k(2:end), squeeze(u_k(1, :)), 50, "black", "square"); hold on
         grid on
 %         alpha(D_k(:));
         colorbar
@@ -160,6 +166,7 @@ for j = 1 : iterations
         title("")
         nexttile([1,4])
         scatter(repmat(t_k(2:end), 1, m), squeeze(u_k_m(2, :)), [], L(:), "filled"); hold on
+        scatter(t_k(2:end), squeeze(u_k(2, :)), 50, "black", "square"); hold on
         grid on
 %         alpha(D_k(:));
         colorbar
@@ -168,6 +175,7 @@ for j = 1 : iterations
         title("")
         nexttile([1,4])
         scatter(repmat(t_k(2:end), 1, m), squeeze(u_k_m(3, :)), [], L(:), "filled"); hold on
+        scatter(t_k(2:end), squeeze(u_k(3, :)), 50, "black", "square"); hold on
         grid on
 %         alpha(D_k(:));
         colorbar
@@ -179,7 +187,7 @@ end
 
 
 %% Time Histories
-sigma_dist = 0.001; % [kg m2 / s2]
+sigma_dist = 0.03; % [kg m2 / s2]
 sigma = [sigma_dist, 0, 0; 0, sigma_dist, 0; 0, 0, sigma_dist]; % need to double check the sqrt(delta t) part
 
 m = 50;
@@ -189,12 +197,15 @@ twist_k = zeros(G.dim, numel(t_k), m); % array of twists (body velocities)
 delta_u = zeros([G.dim, numel(t_k) - 1, m]);
 w_k = zeros([G.dim, numel(t_k) - 1, m]);
 
-for i = 1 : m
-    [g_k(:, i), twist_k(:, :, i), delta_u(:, :, i), w_k(:,:,i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma);
+parfor i = 1 : m
+    %[g_k(:, i), twist_k(:, :, i), delta_u(:, :, i), w_k(:,:,i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma);
+    [~, g_k(:, i), twist_k(:, :, i), ~, delta_u(:, :, i)] = sode45_liegroup(u_k, sigma, w, t_k, noise_delta_t, g0, twist0, J_b, tolerances);
 end
-[g_k_nom, twist_k_nom, delta_u_nom, w_k_nom] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma * 0);
-twist_k_nom = rad2deg(twist_k_nom);
-twist_k = rad2deg(twist_k);
+%[g_k_nom, twist_k_nom, delta_u_nom] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma*0);
+[~, g_k_nom, twist_k_nom, ~, delta_u_nom] = sode45_liegroup(u_k, sigma*0, @(n) zeros([G.dim, n]), t_k, noise_delta_t, g0, twist0, J_b, tolerances);
+%%
+%twist_k_nom = rad2deg(twist_k_nom);
+%twist_k = rad2deg(twist_k);
 
 quaternions = SO3_RotationMatrix_to_quaternions(g_k(2:end, :));
 quaternions_nom = SO3_RotationMatrix_to_quaternions(g_k_nom);
@@ -348,7 +359,7 @@ h(5) = hgtransform();
 set(p_buffer(5).p1,"Parent",h(5))
 set(p_buffer(5).p2,"Parent",h(5))
 set(p_buffer(5).p3,"Parent",h(5))
-for i = 1 : numel(t_k)
+for i = 1 : 5 : numel(t_k)
     for j = 1 : 4
         g_buffer(j) = g_buffer(j + 1);
         h(j).Matrix = [g_buffer(j).element, zeros([3, 1]); zeros([1, 3]), 1];
@@ -358,6 +369,19 @@ for i = 1 : numel(t_k)
     drawnow  % display updates
     pause(control_delta_t / 3)
 end
+axis equal
+xlim([-1, 1])
+ylim([-1, 1])
+zlim([-1, 1])
+
+
+%%
+figure
+plot_basis(g0.element, "i", ":", scale = 1);
+for i = 1 : 5 : numel(t_k)
+    plot_basis(g_k_nom(i).element, "", "-", scale = 0.7);
+end
+plot_basis(gtarg.element, "f", "--", scale = 1)
 axis equal
 xlim([-1, 1])
 ylim([-1, 1])

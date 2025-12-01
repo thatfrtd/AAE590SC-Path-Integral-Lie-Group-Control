@@ -18,7 +18,7 @@ B = B_func([], []); % ASSUMING B IS CONSTANT
 
 delta_t = t_k(2) - t_k(1);
 
-Y = B * R \ B';
+Y = B * inv(R) * B';
 mu = zeros([g_k(1).dim, numel(t_k) - 1, size(twist_k, 3)]);
 
 for i = 1 : numel(t_k) - 1
@@ -44,14 +44,16 @@ for j = 1 : numel(t_k)-1 % loop over time
 end 
 
 L_k = cumsum(L_k, 1, "reverse");
-L_k = S_k + L_k*0 + 0*lambda * log(cumprod(sqrt(det(2 * pi * lambda * Y * delta_t))));
+L_k = S_k + L_k + lambda * log(cumprod(sqrt(det(2 * pi * lambda * Y * delta_t))));
 
 D = exp(-1 / lambda * (L_k - min(L_k, [], 2)));
 %D = sum(reshape(D ./ sum(D, 2), 1, n, num_traj), 2) / size(D, 1);
 D = reshape(D ./ sum(D, 2), 1, n, num_traj);% / size(D, 1);
 
-D_expec = sum(D .* eps_k * sqrt(delta_t), 3);
+%D_expec = sum(D .* eps_k / sqrt(delta_t), 3);
+D_expec = sum(D .* eps_k, 3);
 
-u_k_Kp1 = pagemtimes(inv(R) * B' * inv(Y) * B, u_k_K * delta_t + D_expec) / delta_t;
+%u_k_Kp1 = pagemtimes(inv(R) * B' * inv(Y) * B, u_k_K * delta_t + D_expec) / delta_t;
+u_k_Kp1 = pagemtimes(inv(R) * B' * inv(Y) * B, u_k_K + D_expec);
 
 end

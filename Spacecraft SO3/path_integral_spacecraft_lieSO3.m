@@ -21,7 +21,7 @@ noise_delta_t = 2e-1;
 
 w = @(n) randn([G.dim, n]);
 
-sigma_dist = 150; % [kg m2 / s2]
+sigma_dist = 15000; % [kg m2 / s2]
 sigma = [sigma_dist/10, 0, 0; 0, sigma_dist, 0; 0, 0, sigma_dist] * sqrt(noise_delta_t); % need to double check the sqrt(delta t) part
 
 %% Create Dynamics 
@@ -46,12 +46,12 @@ u_k = 0 * ones([G.dim, numel(t_k) - 1]);
 
 R = 1e-3*eye(G.dim);
 S_g = 1.7e6 * eye(G.dim);
-S_twist = 8e4*0 * eye(G.dim);
+S_twist = 8e5 * eye(G.dim);
 
 
 %% Define Initial Condition and Ta rget
 g0 = SO3_RotationMatrix(angle2dcm(0.1, 1, 0.4)); % Initial DCM
-twist0 = [0; 1; 0]; % Initial angular velocity
+twist0 = [0; 0.1; 0]; % Initial angular velocity
 xtarg = G.identity;
 
 gtarg = SO3_RotationMatrix(eye(3)); % Identity element
@@ -78,7 +78,7 @@ for j = 1 : iterations
         [g_k(:, i), twist_k(:, :, i), delta_u(:, :, i), w_k(:,:,i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma);
     end
     
-    [L, cost_t(:, :, j), cost_exit(:, j)] = liegroup_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, R, S_g = S_g, S_twist = S_twist);
+    [L, cost_t(:, :, j), cost_exit(:, j)] = liegroup_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, R*0, S_g = S_g, S_twist = S_twist);
     [u_k, D_k] = liegroup_update(g_k, u_k, twist_k, delta_u, f, B, R, L, t_k, lambda);
 
     average_cost(j) = sum(L .* control_delta_t, "all") / size(L, 2);
@@ -361,7 +361,7 @@ h(5) = hgtransform();
 set(p_buffer(5).p1,"Parent",h(5))
 set(p_buffer(5).p2,"Parent",h(5))
 set(p_buffer(5).p3,"Parent",h(5))
-for i = 1 : numel(t_k)
+for i = 1 : 10 : numel(t_k)
     for j = 1 : 4
         g_buffer(j) = g_buffer(j + 1);
         h(j).Matrix = [g_buffer(j).element, zeros([3, 1]); zeros([1, 3]), 1];

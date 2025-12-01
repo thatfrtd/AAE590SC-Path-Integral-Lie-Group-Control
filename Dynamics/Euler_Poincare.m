@@ -10,7 +10,7 @@ function [dtwist] = Euler_Poincare(G, twist, u, J_b)
 
 
 % coadjoint action is always transpose of adjoint?
-ad_star_twist = G.ad(twist)';
+ad_star_twist = G.ad(G, twist)';
 
 dtwist = J_b \ (ad_star_twist * J_b * twist + u);
 

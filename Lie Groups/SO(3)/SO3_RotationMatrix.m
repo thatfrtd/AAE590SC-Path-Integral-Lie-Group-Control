@@ -44,7 +44,8 @@ classdef SO3_RotationMatrix < SO3
         end
         function tau_hat = hat(G, tau)
             theta = tau(1:3);
-            tau_hat = skew(theta);
+            tau_hat = G;
+            tau_hat.element = skew(theta); 
         end
 
         function tau = Log(X)
