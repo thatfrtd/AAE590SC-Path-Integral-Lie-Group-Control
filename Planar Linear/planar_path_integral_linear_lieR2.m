@@ -17,10 +17,15 @@ function [u_k, average_cost, cost_t, cost_exit, g_k, twist_k, D_k, L_k] = ...
 cost_t = zeros([numel(t_k) - 1, m, iterations]);
 
 for j = 1 : iterations
-    parfor i = 1 : m
+
+    parfor i = 1:m
         % [t_k2, x_k2, v_k2, u_k2, delta_u2, w_k] = one_step_euler_maruyama_euclidean(@(t,x)0, B, u_k, sigma, t_k, x0(1:2), x0(3:4));
 
-        [g_k(:, i), twist_k(:, :, i), delta_u(:, :, i), w_k(:,:,i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma);
+        [g_k(:, i), twist_k(:, :, i), delta_u(:, :, i), w_k(:, :, i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma);
+    end
+    for i = 1:m
+        [g_k(:, i), twist_k(:, :, i), delta_u(:, :, i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma);
+
     end
     
     [L, cost_t(:, :, j), cost_exit(:, j)] = liegroup_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, R, S_g = S_g, S_twist = S_twist);

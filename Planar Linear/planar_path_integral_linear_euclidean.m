@@ -7,33 +7,34 @@
 % integrator system
 % Most Recent Change: 4 November, 2025
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function u_k = planar_path_integral_linear_euclidean(integration_method, z2, I2, A, B, f, control_delta_t, t_k, u_k, f_func, B_func, x0, v0, xtarg, vtarg, noise_delta_t, w, tolerances)
 
-integration_method = "oneeuler"; % "ode45" or "oneeuler"
+% integration_method = "oneeuler"; % "ode45" or "oneeuler"
 
 %% Create Dynamics 
-z2 = zeros(2);
-I2 = eye(2);
-
-A = [z2, I2; z2, z2];
-B = [z2; I2];
-
-f = @(t, x, u) A * x + B * u;
-control_delta_t = 0.01;
-t_k = 0:control_delta_t:1;
-u_k = 0 * ones([2, numel(t_k) - 1]);
-f_func = @(t, x) z2 * x;
-B_func = @(t, x) I2;
-
-%% Define Initial Condition and Target
-x0 = [0; 0];
-v0 = [0; 1];
-xtarg = [1; 0]; 
-vtarg = [0; 0];
-
-%% Define Noise
-noise_delta_t = 1e-2;
-
-w = @(n) randn([2, n]);
+% z2 = zeros(2);
+% I2 = eye(2);
+% 
+% A = [z2, I2; z2, z2];
+% B = [z2; I2];
+% 
+% f = @(t, x, u) A * x + B * u;
+% control_delta_t = 0.01;
+% t_k = 0:control_delta_t:1;
+% u_k = 0 * ones([2, numel(t_k) - 1]);
+% f_func = @(t, x) z2 * x;
+% B_func = @(t, x) I2;
+% 
+% %% Define Initial Condition and Target
+% x0 = [0; 0];
+% v0 = [0; 1];
+% xtarg = [1; 0]; 
+% vtarg = [0; 0];
+% 
+% %% Define Noise
+% noise_delta_t = 1e-2;
+% 
+% w = @(n) randn([2, n]);
 
 sigma_accel = 0.5; % [m / s2]
 sigma = [sigma_accel, 0; 0, sigma_accel] * sqrt(noise_delta_t); % need to double check the sqrt(delta t) part
@@ -54,7 +55,7 @@ t = zeros([numel(t_k), m]);
 u_n = zeros([2, numel(t_k) - 1, m]);
 delta_u = zeros([2, numel(t_k) - 1, m]);
 
-tolerances = odeset(RelTol=1e-4, AbsTol=1e-4, InitialStep=0.1, MaxStep=0.1);
+% tolerances = odeset(RelTol=1e-4, AbsTol=1e-4, InitialStep=0.1, MaxStep=0.1);
 
 iterations = 300;
 R = eye(2) * 0.06;
@@ -207,3 +208,5 @@ xlabel("Iteration")
 ylabel("Cost")
 title("Cost vs Iteration")
 yscale("log")
+
+end
