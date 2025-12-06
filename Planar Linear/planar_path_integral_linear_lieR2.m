@@ -8,7 +8,7 @@
 % Most Recent Change: 4 November, 2025
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function u_k = planar_path_integral_linear_lieR2(z2, I2, tolerances, noise_delta_t, w, f, B, f_with_control, control_delta_t, t_k, u_k, x0, xtarg, g0, twist0, gtarg, twisttarg)
+function u_k = planar_path_integral_linear_lieR2(z2, I2, tolerances, noise_delta_t, w, f, B, f_with_control, control_delta_t, t_k, u_k, x0, xtarg, g0, twist0, gtarg, twisttarg, iterations)
 
 % z2 = zeros(2);
 % I2 = eye(2);
@@ -52,7 +52,7 @@ twist_k = zeros(g0.dim, numel(t_k), m); % array of twists (body velocities)
 delta_u = zeros([2, numel(t_k) - 1, m]);
 w_k = zeros([2, numel(t_k) - 1, m]);
 
-iterations = 250;
+%iterations = 250;
 R = eye(2);
 S_g = 1000 * eye(2);
 S_twist = 250 * eye(2);
