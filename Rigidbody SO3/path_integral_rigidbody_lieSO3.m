@@ -8,7 +8,7 @@
 % Most Recent Change: 21 November, 2025
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [u_k, cost_t, cost_exit, average_cost] = path_integral_rigidbody_lieSO3(G, z, I, tolerances, noise_delta_t, sigma, w, B_map, f, B, f_with_control)
+function [u_k, cost_t, cost_exit, average_cos, t_kt] = path_integral_rigidbody_lieSO3(G, z, I, tolerances, noise_delta_t, sigma, w, B_map, f, B, f_with_control)
 
 %G = SO3_RotationMatrix();
 
@@ -25,9 +25,9 @@ function [u_k, cost_t, cost_exit, average_cost] = path_integral_rigidbody_lieSO3
 % sigma_dist = 0.03; % [kg m2 / s2]
 % sigma = [sigma_dist, 0, 0; 0, sigma_dist, 0; 0, 0, sigma_dist]; % need to double check the sqrt(delta t) part
 
-%% Create Dynamics 
-moment_of_inertia = diag([1, 1.11, 1.3]);
-J_b = moment_of_inertia; % Generalized inertia
+% %% Create Dynamics 
+% moment_of_inertia = diag([1, 1.11, 1.3]);
+% J_b = moment_of_inertia; % Generalized inertia
 
 % B_map = I;
 % [f, B] = Euler_Poincare_matrices(SO3_RotationMatrix(), J_b, B_map);
@@ -66,7 +66,7 @@ cost_exit = zeros([m, iterations]);
 for j = 1 : iterations
     %[g_k(:, 1), twist_k(:, :, 1), delta_u(:, :, 1), w_k(:,:,1)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma*0);
     %[~, g_k(:, 1), twist_k(:, :, 1), ~, delta_u(:, :, 1)] = sode45_liegroup(u_k, sigma*0, w, t_k, noise_delta_t, g0, twist0, J_b, tolerances);
-    parfor i = 1 : m
+    for i = 1 : m
         %[~, g_k(:, i), twist_k(:, :, i), ~, delta_u(:, :, i)] = sode45_liegroup(u_k, sigma, w, t_k, noise_delta_t, g0, twist0, J_b, tolerances);
         [g_k(:, i), twist_k(:, :, i), delta_u(:, :, i), w_k(:,:,i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma);
     end

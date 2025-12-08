@@ -21,14 +21,17 @@ sigma = [sigma_dist, 0, 0; 0, sigma_dist, 0; 0, 0, sigma_dist]; % need to double
 
 w = @(n) randn([G.dim, n]);
 
+%% Create Dynamics 
+moment_of_inertia = diag([1, 1.11, 1.3]);
+J_b = moment_of_inertia; % Generalized inertia
 B_map = I;
-[f, B] = Euler_Poincare_matrices(SO3_RotationMatrix(), [], B_map);
+[f, B] = Euler_Poincare_matrices(SO3_RotationMatrix(), J_b, B_map);
 
 f_with_control = @(t, x, u) [z, I; z, z] * x + [z; B(t, x)] * u;
 
-[u_k, cost_t, cost_exit, average_cost] = path_integral_rigidbody_lieSO3(G, z, I, tolerances, noise_delta_t,sigma, w, B_map, f, B, f_with_control);
+[u_k, cost_t, cost_exit, average_cost, t_k] = path_integral_rigidbody_lieSO3(G, z, I, tolerances, noise_delta_t,sigma, w, B_map, f, B, f_with_control);
 
-% [u_k,  cost_t, cost_exit, average_cost] = path_integral_spacecraft_lieSO3(G, z, I, tolerances, noise_delta_t, sigma, w, B_map, f, B, f_with_control);
+% [u_k,  cost_t, cost_exit, average_cost, t_k] = path_integral_spacecraft_lieSO3(G, z, I, tolerances, noise_delta_t, sigma, w, B_map, f, B, f_with_control);
 %% Time Histories
 sigma_dist = 0.03; % [kg m2 / s2]
 sigma = [sigma_dist, 0, 0; 0, sigma_dist, 0; 0, 0, sigma_dist]; % need to double check the sqrt(delta t) part

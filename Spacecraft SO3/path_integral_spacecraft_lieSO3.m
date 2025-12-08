@@ -8,7 +8,7 @@
 % moment
 % Most Recent Change: 22 November, 2025
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [u_k, cost_t, cost_exit, average_cost] = path_integral_spacecraft_lieSO3(G, z, I, tolerances, noise_delta_t,sigma, w, B_map, f, B, f_with_control)
+function [u_k, cost_t, cost_exit, average_cost, t_k] = path_integral_spacecraft_lieSO3(G, z, I, tolerances, noise_delta_t,sigma, w, B_map, f, B, f_with_control)
 
 %G = SO3_RotationMatrix();
 
@@ -26,8 +26,8 @@ function [u_k, cost_t, cost_exit, average_cost] = path_integral_spacecraft_lieSO
 % sigma = [sigma_dist/10, 0, 0; 0, sigma_dist, 0; 0, 0, sigma_dist] * sqrt(noise_delta_t); % need to double check the sqrt(delta t) part
 
 %% Create Dynamics 
-moment_of_inertia = [1.29 0 0; 0 9.68 0; 0 0 10.1] * 1e6; % [kg m2]
-J_b = moment_of_inertia; % Generalized inertia
+% moment_of_inertia = [1.29 0 0; 0 9.68 0; 0 0 10.1] * 1e6; % [kg m2]
+% J_b = moment_of_inertia; % Generalized inertia
 
 % Create orbit dynamics
 R_E = 6378.1363; % [km] 

@@ -25,6 +25,7 @@ B_map = I2;
 f_with_control = @(t, x, u) [z2, I2; z2, z2] * x + [z2; B(t, x)] * u;
 control_delta_t = 0.01;
 t_k = 0:control_delta_t:1;
+%disp(size(t_k))
 u_k = 0 * ones([2, numel(t_k) - 1]);
 
 x0 = [0; 0; 0; 1];
@@ -35,24 +36,27 @@ twist0 = x0(3:4);
 gtarg = R2(xtarg(1:2));
 twisttarg = xtarg(3:4);
 
-iterations = 250;
+iterations = 2;
+
 max_steps = 50;
 
 for i = 1 : max_steps
     % Update Control
-    [u_k, cost_t, cost_exit, average_cost, sigma]  = planar_path_integral_linear_lieR2_basic(z2, I2, tolerances, noise_delta_t, w, f, B, f_with_control, control_delta_t, t_k, u_k, x0, xtarg, g0, twist0, gtarg, twisttarg, iterations);
+    [u_k, cost_t, cost_exit, average_cost]  = planar_path_integral_linear_lieR2(z2, I2, tolerances, noise_delta_t, w, f, B, f_with_control, control_delta_t, t_k, u_k, xtarg, g0, twist0, gtarg, twisttarg, iterations);
+
 
     % Step forward one timestep
-    [g_k(:, i), twist_k(:, :, i), delta_u(:, :, i), w_k(:,:,i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, [0, t_k(1)], sigma);
+    [g_k_next, twist_k_next, ~, ~] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, [0, control_delta_t], sigma);
+    g0 = g_k_next(:, 2);
+    twist0 = twist_k_next(:, 2); 
+    u_k = [u_k(:,2:end), zeros(size(u_k,1), 1)];
 
     % Check if stopping condition met
-    disp(g_k(1) - gtarg);
-    disp(g_k(2) - gtarg);
-    disp(twist_k - twisttarg);
-
+    g_error = gtarg.left_invariant_error(g0);
+    twist_error = twisttarg - twist0;
 end
 
-%[u_k, cost_t, cost_exit, average_cost]  = planar_path_integral_linear_lieR2(z2, I2, tolerances, noise_delta_t, w, f, B, f_with_control, control_delta_t, t_k, u_k, x0, xtarg, g0, twist0, gtarg, twisttarg, iterations);
+%[u_k, cost_t, cost_exit, average_cost]  = planar_path_integral_linear_lieR2_basic(z2, I2, tolerances, noise_delta_t, w, f, B, f_with_control, control_delta_t, t_k, u_k, x0, xtarg, g0, twist0, gtarg, twisttarg, iterations);
 
 %% Time Histories
 sigma_accel = 0.2; % [m / s2]
