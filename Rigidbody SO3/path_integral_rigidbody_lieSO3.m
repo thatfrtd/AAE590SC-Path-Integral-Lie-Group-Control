@@ -8,7 +8,7 @@
 % Most Recent Change: 21 November, 2025
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [u_k, cost_t, cost_exit, average_cos, t_kt] = path_integral_rigidbody_lieSO3(G, z, I, tolerances, noise_delta_t, sigma, w, B_map, f, B, f_with_control)
+function [u_k, cost_t, cost_exit, average_cost] = path_integral_rigidbody_lieSO3(G, z, I, tolerances, noise_delta_t, iterations, sigma, J_b, w, B_map, f, B, f_with_control, control_delta_t, t_k, u_k, R, S_g, S_twist, g0, twist0, gtarg, twisttarg)
 
 %G = SO3_RotationMatrix();
 
@@ -33,20 +33,20 @@ function [u_k, cost_t, cost_exit, average_cos, t_kt] = path_integral_rigidbody_l
 % [f, B] = Euler_Poincare_matrices(SO3_RotationMatrix(), J_b, B_map);
 % 
 % f_with_control = @(t, x, u) [z, I; z, z] * x + [z; B(t, x)] * u;
-control_delta_t = 0.01;
-t_k = 0:control_delta_t:1.8;
-u_k = 0 * ones([G.dim, numel(t_k) - 1]);
-
-R = eye(G.dim);
-S_g = 1.6e9 * eye(G.dim);
-S_twist = 8e8 * eye(G.dim);
-
-%% Define Initial Condition and Target
-g0 = SO3_RotationMatrix(angle2dcm(0, deg2rad(0), deg2rad(0))); % Initial DCM
-twist0 = [0; 0; 0]; % Initial angular velocity
-
-gtarg = SO3_RotationMatrix(angle2dcm(0, deg2rad(30), deg2rad(30))'); % Target DCM
-twisttarg = zeros([3, 1]);
+% control_delta_t = 0.01;
+% t_k = 0:control_delta_t:1.8;
+% u_k = 0 * ones([G.dim, numel(t_k) - 1]);
+% 
+% R = eye(G.dim);
+% S_g = 1.6e9 * eye(G.dim);
+% S_twist = 8e8 * eye(G.dim);
+% 
+% %% Define Initial Condition and Target
+% g0 = SO3_RotationMatrix(angle2dcm(0, deg2rad(0), deg2rad(0))); % Initial DCM
+% twist0 = [0; 0; 0]; % Initial angular velocity
+% 
+% gtarg = SO3_RotationMatrix(angle2dcm(0, deg2rad(30), deg2rad(30))'); % Target DCM
+% twisttarg = zeros([3, 1]);
 
 %% Run Monte Carlo
 m = 40;
@@ -57,7 +57,7 @@ delta_u = zeros([G.dim, numel(t_k) - 1, m]);
 w_k = zeros([G.dim, numel(t_k) - 1, m]);
 
 
-iterations = 40;
+%iterations = 40;
 lambda_matrix = sigma * sigma' * R;
 lambda = lambda_matrix(1);
 average_cost = zeros([1, iterations]);

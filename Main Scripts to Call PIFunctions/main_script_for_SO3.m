@@ -14,24 +14,42 @@ I = eye(G.dim);
 
 tolerances = odeset(RelTol=1e-6, AbsTol=1e-6);
 
-noise_delta_t = 1e-2;% change based on each func
-
-sigma_dist = 0.03; % [kg m2 / s2] change based on each function
-sigma = [sigma_dist, 0, 0; 0, sigma_dist, 0; 0, 0, sigma_dist]; % need to double check the sqrt(delta t) part
+% Define Noise
+noise_delta_t = 1e-2;
 
 w = @(n) randn([G.dim, n]);
+
+sigma_dist = 0.03; % [kg m2 / s2]
+sigma = [sigma_dist, 0, 0; 0, sigma_dist, 0; 0, 0, sigma_dist]; % need to double check the sqrt(delta t) part
 
 %% Create Dynamics 
 moment_of_inertia = diag([1, 1.11, 1.3]);
 J_b = moment_of_inertia; % Generalized inertia
+
 B_map = I;
 [f, B] = Euler_Poincare_matrices(SO3_RotationMatrix(), J_b, B_map);
 
 f_with_control = @(t, x, u) [z, I; z, z] * x + [z; B(t, x)] * u;
+control_delta_t = 0.01;
+t_k = 0:control_delta_t:1.8;
+u_k = 0 * ones([G.dim, numel(t_k) - 1]);
 
-[u_k, cost_t, cost_exit, average_cost, t_k] = path_integral_rigidbody_lieSO3(G, z, I, tolerances, noise_delta_t,sigma, w, B_map, f, B, f_with_control);
+R = eye(G.dim);
+S_g = 1.6e9 * eye(G.dim);
+S_twist = 8e8 * eye(G.dim);
+
+%% Define Initial Condition and Target
+g0 = SO3_RotationMatrix(angle2dcm(0, deg2rad(0), deg2rad(0))); % Initial DCM
+twist0 = [0; 0; 0]; % Initial angular velocity
+
+gtarg = SO3_RotationMatrix(angle2dcm(0, deg2rad(30), deg2rad(30))'); % Target DCM
+twisttarg = zeros([3, 1]);
+
+iterations = 40;
+[u_k, cost_t, cost_exit, average_cost] = path_integral_rigidbody_lieSO3(G, z, I, tolerances, noise_delta_t, iterations, sigma, J_b, w, B_map, f, B, f_with_control, control_delta_t, t_k, u_k, R, S_g, S_twist, g0, twist0, gtarg, twisttarg);
 
 % [u_k,  cost_t, cost_exit, average_cost, t_k] = path_integral_spacecraft_lieSO3(G, z, I, tolerances, noise_delta_t, sigma, w, B_map, f, B, f_with_control);
+
 %% Time Histories
 sigma_dist = 0.03; % [kg m2 / s2]
 sigma = [sigma_dist, 0, 0; 0, sigma_dist, 0; 0, 0, sigma_dist]; % need to double check the sqrt(delta t) part
@@ -43,7 +61,7 @@ twist_k = zeros(G.dim, numel(t_k), m); % array of twists (body velocities)
 delta_u = zeros([G.dim, numel(t_k) - 1, m]);
 w_k = zeros([G.dim, numel(t_k) - 1, m]);
 
-parfor i = 1 : m
+for i = 1 : m
     %[g_k(:, i), twist_k(:, :, i), delta_u(:, :, i), w_k(:,:,i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma);
     [~, g_k(:, i), twist_k(:, :, i), ~, delta_u(:, :, i)] = sode45_liegroup(u_k, sigma, w, t_k, noise_delta_t, g0, twist0, J_b, tolerances);
 end
@@ -57,6 +75,9 @@ quaternions = SO3_RotationMatrix_to_quaternions(g_k(2:end, :));
 quaternions_nom = SO3_RotationMatrix_to_quaternions(g_k_nom);
 quaternion_target = SO3_RotationMatrix_to_quaternions(gtarg);
 
+j2 = size(average_cost);
+
+j = j2(2);
 
 figure
 tiledlayout(3, 12)
