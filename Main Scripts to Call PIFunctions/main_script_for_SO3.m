@@ -46,9 +46,24 @@ gtarg = SO3_RotationMatrix(angle2dcm(0, deg2rad(30), deg2rad(30))'); % Target DC
 twisttarg = zeros([3, 1]);
 
 iterations = 40;
-[u_k, cost_t, cost_exit, average_cost] = path_integral_rigidbody_lieSO3(G, z, I, tolerances, noise_delta_t, iterations, sigma, J_b, w, B_map, f, B, f_with_control, control_delta_t, t_k, u_k, R, S_g, S_twist, g0, twist0, gtarg, twisttarg);
 
-% [u_k,  cost_t, cost_exit, average_cost, t_k] = path_integral_spacecraft_lieSO3(G, z, I, tolerances, noise_delta_t, sigma, w, B_map, f, B, f_with_control);
+max_steps = 10;
+for i = 1: max_steps
+    %update control
+    [u_k, cost_t, cost_exit, average_cost] = path_integral_rigidbody_lieSO3(G, z, I, tolerances, noise_delta_t, iterations, sigma, J_b, w, B_map, f, B, f_with_control, control_delta_t, t_k, u_k, R, S_g, S_twist, g0, twist0, gtarg, twisttarg);
+
+    % [u_k,  cost_t, cost_exit, average_cost, t_k] = path_integral_spacecraft_lieSO3(G, z, I, tolerances, noise_delta_t, sigma, w, B_map, f, B, f_with_control);
+
+    % Step forward one timestep
+    [g_k_next, twist_k_next, ~, ~] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma);    g0 = g_k_next(:, 2);
+    g0 = g_k_next(:,2);
+    twist0 = twist_k_next(:, 2); 
+    u_k = [u_k(:,2:end), zeros(size(u_k,1), 1)];
+
+    % Check if stopping condition met
+    g_error = gtarg.left_invariant_error(g0);
+    twist_error = twisttarg - twist0;
+end
 
 %% Time Histories
 sigma_dist = 0.03; % [kg m2 / s2]
