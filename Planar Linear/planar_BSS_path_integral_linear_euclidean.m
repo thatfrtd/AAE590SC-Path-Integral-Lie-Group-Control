@@ -7,29 +7,29 @@
 % on a planar double integrator system
 % Most Recent Change: 29 November, 2025
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function u_k = planar_BSS_path_integral_linear_euclidean(integration_method, z2, I2, A, B, f, control_delta_t, t_k, u_k, f_func, B_func, x0, v0, xtarg, vtarg, w, tolerances)
+% function u_k = planar_BSS_path_integral_linear_euclidean(integration_method, z2, I2, A, B, f, control_delta_t, t_k, u_k, f_func, B_func, x0, v0, xtarg, vtarg, w, tolerances)
 
-% integration_method = "oneeuler"; % "ode45" or "oneeuler"
-% 
-% %% Create Dynamics 
-% z2 = zeros(2);
-% I2 = eye(2);
-% 
-% A = [z2, I2; z2, z2];
-% B = [z2; I2];
-% 
-% f = @(t, x, u) A * x + B * u;
-% control_delta_t = 1e-2;
-% t_k = 0:control_delta_t:1;
-% u_k = 0 * ones([2, numel(t_k) - 1]);
-% f_func = @(t, x) z2 * x;
-% B_func = @(t, x) I2;
-% 
-% %% Define Initial Condition and Target
-% x0 = [0; 0];
-% v0 = [0; 1];
-% xtarg = [1; 0]; 
-% vtarg = [0; 0];
+integration_method = "oneeuler"; % "ode45" or "oneeuler"
+
+%% Create Dynamics 
+z2 = zeros(2);
+I2 = eye(2);
+
+A = [z2, I2; z2, z2];
+B = [z2; I2];
+
+f = @(t, x, u) A * x + B * u;
+control_delta_t = 1e-2;
+t_k = 0:control_delta_t:1;
+u_k = 0 * ones([2, numel(t_k) - 1]);
+f_func = @(t, x, v) z2 * x;
+B_func = @(t, x) I2;
+
+%% Define Initial Condition and Target
+x0 = [0; 0];
+v0 = [0; 1];
+xtarg = [1; 0]; 
+vtarg = [0; 0];
 
 %% Define Noise
 noise_delta_t = control_delta_t;%1e-2;

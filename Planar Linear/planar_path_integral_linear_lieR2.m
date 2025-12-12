@@ -7,42 +7,49 @@
 % integrator system represented by the Lie Group R2
 % Most Recent Change: 4 November, 2025
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+% function u_k = planar_path_integral_linear_lieR2(z2, I2, tolerances, noise_delta_t, w, f, B, f_with_control, control_delta_t, t_k, u_k, x0, xtarg, g0, twist0, gtarg, twisttarg)
 
-function u_k = planar_path_integral_linear_lieR2(z2, I2, tolerances, noise_delta_t, w, f, B, f_with_control, control_delta_t, t_k, u_k, x0, xtarg, g0, twist0, gtarg, twisttarg)
+z2 = zeros(2);
+I2 = eye(2);
 
-% z2 = zeros(2);
-% I2 = eye(2);
-% 
-% tolerances = odeset(RelTol=1e-12, AbsTol=1e-12);
-% 
-% %% Define Noise
-% noise_delta_t = 1e-2;
-% 
-% w = @(n) randn([2, n]);
+tolerances = odeset(RelTol=1e-12, AbsTol=1e-12);
+
+%% Define Noise
+noise_delta_t = 1e-1;
+
+w = @(n) randn([2, n]);
 
 sigma_accel = 0.5; % [kg m / s2]
 sigma = [sigma_accel, 0; 0, sigma_accel] * sqrt(noise_delta_t); % need to double check the sqrt(delta t) part
 
 %% Create Dynamics 
-% mass = 1;
-% J_b = mass; % Generalized inertia
-% 
-% B_map = I2; 
-% [f, B] = Euler_Poincare_matrices(R2(), J_b, B_map);
-% 
-% f_with_control = @(t, x, u) [z2, I2; z2, z2] * x + [z2; B(t, x)] * u;
-% control_delta_t = 0.01;
-% t_k = 0:control_delta_t:1;
-% u_k = 0 * ones([2, numel(t_k) - 1]);
-% 
-% %% Define Initial Condition and Target
-% x0 = [0; 0; 0; 1];
-% xtarg = [1; 0; 0; 0];
-% g0 = R2(x0(1:2));
-% twist0 = x0(3:4);
-% 
-% gtarg = R2(xtarg(1:2));
-% twisttarg = xtarg(3:4);
+mass = 1;
+J_b = mass; % Generalized inertia
+
+R_E = 6378.1363; % [km]
+mu_E = 398600.4415; % [km3 / s2]
+r_c = R_E + 300;
+mean_motion = sqrt(mu_E / r_c);
+
+f_ext = @(x, twist) [1 0 0; 0 1 0] * CWH_accel([x.element / 1000; 0; twist / 1000; 0], mean_motion);
+
+B_map = @(x) I2; 
+[f, B] = Euler_Poincare_matrices(R2(), J_b, B_map, f_ext);
+
+f_with_control = @(t, x, u) [z2, I2; z2, z2] * x + [z2; B(t, x)] * u;
+control_delta_t = 0.1;
+t_k = 0:control_delta_t:10;
+u_k = 0 * ones([2, numel(t_k) - 1]);
+
+%% Define Initial Condition and Target
+x0 = [100; 0; 0; 0];
+xtarg = [0; 0; 0; 0];
+g0 = R2(x0(1:2));
+twist0 = x0(3:4);
+
+gtarg = R2(xtarg(1:2));
+twisttarg = xtarg(3:4);
 
 %% Run Monte Carlo
 m = 50;
@@ -52,19 +59,18 @@ twist_k = zeros(g0.dim, numel(t_k), m); % array of twists (body velocities)
 delta_u = zeros([2, numel(t_k) - 1, m]);
 w_k = zeros([2, numel(t_k) - 1, m]);
 
-iterations = 250;
+iterations = 150;
 R = eye(2);
-S_g = 1000 * eye(2);
-S_twist = 250 * eye(2);
+S_g = 8000 * eye(2);
+S_twist = 2000 * eye(2);
 lambda_matrix = sigma * sigma' * R;
-lambda = lambda_matrix(1) * 100;
+lambda = lambda_matrix(1)*100;
 average_cost = zeros([1, iterations]);
 cost_exit = zeros([m, iterations]);
 %%Different Cost_t 
 cost_t = zeros([numel(t_k) - 1, m, iterations]);
 
 for j = 1 : iterations
-
     parfor i = 1:m
         % [t_k2, x_k2, v_k2, u_k2, delta_u2, w_k] = one_step_euler_maruyama_euclidean(@(t,x)0, B, u_k, sigma, t_k, x0(1:2), x0(3:4));
 
@@ -75,10 +81,11 @@ for j = 1 : iterations
     %     [g_k(:, i), twist_k(:, :, i), delta_u(:, :, i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma);
     % 
     % end
-    
+
     [L, cost_t(:, :, j), cost_exit(:, j)] = liegroup_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, R, S_g = S_g, S_twist = S_twist);
 
-    [u_k, D_k, L_k] = liegroup_update(g_k, u_k, twist_k, pagemtimes(sigma, w_k), f, B, R, L, t_k, lambda);
+%    [u_k, D_k, L_k] = liegroup_update(g_k, u_k, twist_k, pagemtimes(sigma, w_k), f, B, R, L, t_k, lambda);
+    [u_k, D_k, L_k] = liegroup_update(g_k, u_k, twist_k, delta_u, f, B, R, L, t_k, lambda);
 
     average_cost(j) = sum(L_k, "all") / numel(L_k);
     average_cost(j)
@@ -181,4 +188,4 @@ xlabel("Iteration")
 ylabel("Cost")
 title("Cost vs Iteration")
 yscale("log")
-end
+% end

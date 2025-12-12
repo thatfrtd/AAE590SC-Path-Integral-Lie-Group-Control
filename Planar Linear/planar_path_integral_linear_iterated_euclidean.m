@@ -8,37 +8,44 @@
 % Most Recent Change: 4 November, 2025
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function u_k = planar_path_integral_linear_iterated_euclidean(integration_method, z2, I2, A, B, f, control_delta_t, t_k, u_k, f_func, B_func, x0, v0, xtarg, vtarg, noise_delta_t, w, tolerances)
+%function u_k = planar_path_integral_linear_iterated_euclidean(integration_method, z2, I2, A, B, f, control_delta_t, t_k, u_k, f_func, B_func, x0, v0, xtarg, vtarg, noise_delta_t, w, tolerances)
 
-% integration_method = "oneeuler"; % "ode45" or "oneeuler"
+integration_method = "oneeuler"; % "ode45" or "oneeuler"
 
 
-% %% Create Dynamics 
-% z2 = zeros(2);
-% I2 = eye(2);
-% 
-% A = [z2, I2; z2, z2];
-% B = [z2; I2];
-% 
-% f = @(t, x, u) pagemtimes(A, x) + pagemtimes(B, u);
-% control_delta_t = 0.01;
-% t_k = 0:control_delta_t:1;
-% u_k = 0 * ones([2, numel(t_k) - 1]);
-% f_func = @(t, x) z2 * x;
-% B_func = @(t, x) I2;
-% 
-% %% Define Initial Condition and Target
-% x0 = [0; 0];
-% v0 = [0; 1];
-% xtarg = [1; 0]; 
-% vtarg = [0; 0];
-% 
-% %% Define Noise
-% noise_delta_t = 1e-2;
-% 
-% w = @(n) randn([2, n]);
+%% Create Dynamics 
+z2 = zeros(2);
+I2 = eye(2);
 
-sigma_accel = 0.5; % [m / s2]
+A = [z2, I2; z2, z2];
+B = [z2; I2];
+
+R_E = 6378.1363; % [km]
+mu_E = 398600.4415; % [km3 / s2]
+r_c = R_E + 300;
+mean_motion = sqrt(mu_E / r_c ^ 3);
+
+f_ext = @(t, x) [1 0 0; 0 1 0] * CWH_accel(x, mean_motion);
+
+f = @(t, x, u) pagemtimes(A, x) + pagemtimes(B, u) + [zeros([2, 1]); f_ext(t, x)];
+control_delta_t = 0.1;
+t_k = 0:control_delta_t:100;
+u_k = 0 * ones([2, numel(t_k) - 1]);
+f_func = @(t, x, twist) z2 * x + f_ext(t, [x; 0; twist; 0]);
+B_func = @(t, x) I2;
+
+%% Define Initial Condition and Target
+x0 = [600; 400];
+v0 = [0; 1];
+xtarg = [0; 0]; 
+vtarg = [0; 0];
+
+%% Define Noise
+noise_delta_t = 1e-1;
+
+w = @(n) randn([2, n]);
+
+sigma_accel = 0.005; % [m / s2]
 sigma = [sigma_accel, 0; 0, sigma_accel] * sqrt(noise_delta_t); % need to double check the sqrt(delta t) part
 
 %% Run Monte Carlo
@@ -52,8 +59,8 @@ delta_u = zeros([2, numel(t_k) - 1, m]);
 
 tolerances = odeset(RelTol=1e-4, AbsTol=1e-4, InitialStep=0.1, MaxStep=0.1);
 
-iterations = 210;
-R = eye(2) * 1;
+iterations = 500;
+R = eye(2) * 10;
 S_x = 800 * eye(2);
 S_v = 200 * eye(2);
 lambda_matrix = sigma * sigma' * R;
@@ -70,7 +77,7 @@ for j = 1 : iterations
             v(:, :, i) = x_full(3:4, :);
         end
     elseif integration_method == "oneeuler"
-        parfor i = 1 : m
+        for i = 1 : m
             [t(:, i), x(:, :, i), v(:, :, i), ~, delta_u(:, :, i)] = one_step_euler_maruyama_euclidean(f_func, B_func, u_k, sigma, t_k, x0, v0);
         end
     end
@@ -92,7 +99,7 @@ for j = 1 : iterations
         %L_flat = repmat(L_new', 101, 1);
         L_new = [L_new; L_new(end, :)];
         scatter(squeeze(x(1, :)), squeeze(x(2, :)), [], L_new(:), "filled"); hold on
-        alpha(L_new(:))
+        %alpha(L_new(:))
         plot(squeeze(x_new(1, :)), squeeze(x_new(2, :)), LineStyle="--", LineWidth=1, Color="r"); hold on
         scatter(xtarg(1), xtarg(2));
         xlabel("X [m]")
@@ -205,4 +212,4 @@ ylabel("Cost")
 title("Cost vs Iteration")
 yscale("log")
 
-end
+%end

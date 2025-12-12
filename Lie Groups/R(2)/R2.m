@@ -43,7 +43,8 @@ classdef R2 < Group
             tau = tau_hat;
         end
         function tau_hat = hat(G, tau)
-            tau_hat = tau;
+            tau_hat = G;
+            tau_hat.element = tau;
         end
 
         function X = Exp(G, tau)
