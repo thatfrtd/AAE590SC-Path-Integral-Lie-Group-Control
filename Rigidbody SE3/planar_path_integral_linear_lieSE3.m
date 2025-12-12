@@ -22,8 +22,8 @@ noise_delta_t = 1e-2;
 
 w = @(n) randn([6, n]);
 
-sigma_torque = 0.3; % [kg m2 / s2]
-sigma_accel = 5; % [kg m / s2]
+sigma_torque = 0.03; % [kg m2 / s2]
+sigma_accel = 0.05; % [kg m / s2]
 sigma = diag([sigma_torque, sigma_torque, sigma_torque, sigma_accel, sigma_accel, sigma_accel]);% * sqrt(noise_delta_t); % need to double check the sqrt(delta t) part
 
 nu = size(sigma, 1);
@@ -45,14 +45,14 @@ B_map = @(g) blkdiag(eye(3), g.R);
 
 f_with_control = @(t, x, u) [z, I; z, z] * x + [z2; B(t, x)] * u;
 control_delta_t = 0.01;
-t_k = 0:control_delta_t:1;
+t_k = 0:control_delta_t:1.8;
 u_k = 0 * ones([nu, numel(t_k) - 1]);
 
 %% Define Initial Condition and Target
 R0 = angle2dcm(0, deg2rad(0), deg2rad(0));
-r0 = [-7; 70; -20];
+r0 = [2; 1; 0.2];
 w0 = [0; 0; 0];
-v0 = [0; 0; 0];
+v0 = [0; 0; -2];
 g0 = SE3_RotationMatrix(R0, r0);
 twist0 = [w0; v0];
 
