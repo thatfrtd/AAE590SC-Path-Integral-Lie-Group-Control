@@ -33,13 +33,13 @@ w = @(n) randn([2, n]);
 
 tolerances = odeset(RelTol=1e-4, AbsTol=1e-4, InitialStep=0.1, MaxStep=0.1);
 
-iterations = 400;
+iterations = 300;
 
 %[u_k, u_n, cost_t, cost_exit, average_cost]  = planar_path_integral_linear_iterated_euclidean(integration_method, iterations, z2, I2, A, B, f, control_delta_t, t_k, u_k, f_func, B_func, x0, v0, xtarg, vtarg, noise_delta_t, w, tolerances);
 
-%[u_k, u_n, cost_t, cost_exit, average_cost] = planar_path_integral_linear_euclidean(integration_method, z2, I2, A, B, f, control_delta_t, t_k, u_k, f_func, B_func, x0, v0, xtarg, vtarg, noise_delta_t, w, tolerances);
+[u_k, u_n, cost_t, cost_exit, average_cost] = planar_path_integral_linear_euclidean(integration_method, z2, I2, A, B, f, control_delta_t, t_k, u_k, f_func, iterations, B_func, x0, v0, xtarg, vtarg, noise_delta_t, w, tolerances);
 % 
-[u_k, u_n, cost_t, cost_exit, average_cost] = planar_BSS_path_integral_linear_euclidean(integration_method, z2, I2, A, B, f, control_delta_t, t_k, u_k, f_func, B_func, x0, v0, xtarg, vtarg, w, tolerances);
+%[u_k, u_n, cost_t, cost_exit, average_cost] = planar_BSS_path_integral_linear_euclidean(integration_method, z2, I2, A, B, f, control_delta_t, t_k, u_k, f_func, B_func, x0, v0, xtarg, vtarg, w, tolerances);
 % 
 % %% Time Histories
 sigma_accel = 0.2; %0.3 for PI euclidean 

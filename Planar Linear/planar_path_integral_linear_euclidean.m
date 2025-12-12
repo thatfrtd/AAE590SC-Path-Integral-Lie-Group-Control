@@ -7,7 +7,7 @@
 % integrator system
 % Most Recent Change: 4 November, 2025
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [u_k, u_n, cost_t, cost_exit, average_cost] = planar_path_integral_linear_euclidean(integration_method, z2, I2, A, B, f, control_delta_t, t_k, u_k, f_func, B_func, x0, v0, xtarg, vtarg, noise_delta_t, w, tolerances)
+function [u_k, u_n, cost_t, cost_exit, average_cost] = planar_path_integral_linear_euclidean(integration_method, z2, I2, A, B, f, control_delta_t, t_k, u_k, f_func, iterations, B_func, x0, v0, xtarg, vtarg, noise_delta_t, w, tolerances)
 
 % integration_method = "oneeuler"; % "ode45" or "oneeuler"
 
@@ -57,7 +57,7 @@ delta_u = zeros([2, numel(t_k) - 1, m]);
 
 % tolerances = odeset(RelTol=1e-4, AbsTol=1e-4, InitialStep=0.1, MaxStep=0.1);
 
-iterations = 300;
+%iterations = 300;
 R = eye(2) * 0.06;
 S_x = 60 * eye(2);
 S_v = 15 * eye(2);
