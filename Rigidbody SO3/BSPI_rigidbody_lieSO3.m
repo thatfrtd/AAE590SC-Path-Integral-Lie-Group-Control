@@ -20,8 +20,8 @@ noise_delta_t = 1e-2;
 
 w = @(n) randn([G.dim, n]);
 
-sigma_dist = 0.03; % [kg m2 / s2]
-sigma = [sigma_dist, 0, 0; 0, sigma_dist, 0; 0, 0, sigma_dist]; % need to double check the sqrt(delta t) part
+sigma_dist = 0.05; % [kg m2 / s2]
+sigma = [2 * sigma_dist, 0, 0; 0, sigma_dist, 0; 0, 0, sigma_dist]; % need to double check the sqrt(delta t) part
 
 %% Create Dynamics 
 moment_of_inertia = diag([1, 1.11, 1.3]);
@@ -32,7 +32,7 @@ B_map = @(x) I;
 
 f_with_control = @(t, x, u) [z, I; z, z] * x + [z; B(t, x)] * u;
 control_delta_t = 0.01;
-t_k = 0:control_delta_t:1.8;
+t_k = 0:control_delta_t:2;
 u_k = 0 * ones([G.dim, numel(t_k) - 1]);
 
 R = eye(G.dim);
@@ -40,18 +40,18 @@ S_g = 1.6e9 * eye(G.dim);
 S_twist = 8e8 * eye(G.dim);
 
 %% Define Initial Condition and Target
-g0 = SO3_RotationMatrix(angle2dcm(0, deg2rad(0), deg2rad(0))); % Initial DCM
+g0 = SO3_RotationMatrix(angle2dcm(deg2rad(-15), deg2rad(0), deg2rad(0))); % Initial DCM
 twist0 = [0; 0; 0]; % Initial angular velocity
 
-gtarg = SO3_RotationMatrix(angle2dcm(50, deg2rad(120), deg2rad(260))'); % Target DCM
+gtarg = SO3_RotationMatrix(angle2dcm(50, deg2rad(120), deg2rad(240))'); % Target DCM
 twisttarg = zeros([3, 1]);
 
 %%
 % Define initial state covariance
-sigma_xhat0 = [5e-2; ... % _x
-               5e-2; ... % _y
-               5e-2]; ... % _z
-P0 = diag(sigma_xhat0 .^ 2)*1e-5;
+sigma_xhat0 = [1e-2; ... % _x
+               1e-2; ... % _y
+               1e-2]; ... % _z
+P0 = diag(sigma_xhat0 .^ 2);
 
 P_k = zeros([3, 3, numel(t_k)]);
 P_k(:, :, 1) = P0;
@@ -65,26 +65,12 @@ for k = 1 : numel(t_k) - 1
 end
 
 P_fail = 0.01;
-backoff_coef = sqrt(chi2inv(1 - P_fail, G.dim));
-
-% %%
-% g0.sample_left_gaussian()
-% 
-% figure
-% plot_basis(g0.element, "i", ":", scale = 1);
-% for i = 1 : 5 : numel(t_k)
-%     plot_basis(g_k_nom(i).element, "", "-", scale = 0.7);
-% end
-% plot_basis(gtarg.element, "f", "--", scale = 1)
-% axis equal
-% xlim([-1, 1])
-% ylim([-1, 1])
-% zlim([-1, 1])
+backoff_coef = sqrt(chi2inv(1 - P_fail, 1));
 
 %% Set up constraint
-logistic = @(x) 1 ./ (1 + exp(-8000*x)); % Smooth out penalty
+logistic = @(x) 1 ./ (1 + exp(-2000*x)); % Smooth out penalty
 
-objective_penalty = 1e6;
+objective_penalty = 1e7;
 cone_angle = 30; % [deg]
 sun_dcm = angle2dcm(-1.4, 0.8, 1.2);
 sun_direction = sun_dcm * [0; 0; 1];
@@ -96,7 +82,7 @@ alpha = @(g, X) X' * g.element' * [-(sun_direction(2) * sensor_direction_inertia
                                      sun_direction(1) * sensor_direction_inertial(3) - sun_direction(3) * sensor_direction_inertial(1); ...
                                    -(sun_direction(1) * sensor_direction_inertial(2) - sun_direction(2) * sensor_direction_inertial(1))];
 alpha_hat = @(g, X) alpha(g, X) / norm(alpha(g, X));
-sun_chance_constraint = @(g, X) -cosd(cone_angle) + sun_direction' * g.rplus(backoff_coef * X * alpha_hat(g, X) * 0).element * sensor_direction_body;
+sun_chance_constraint = @(g, X) -cosd(cone_angle) + sun_direction' * g.rplus(-backoff_coef * X * alpha_hat(g, X)).element * sensor_direction_body;
 chance_constrained_state_running_cost = @(g, twist, X) objective_penalty * logistic(sun_chance_constraint(g, X));
 
 sun_constraint = @(g, twist) objective_penalty * logistic(-cosd(cone_angle) + sun_direction' * g.element * sensor_direction_body);
@@ -117,14 +103,14 @@ w_k = zeros([G.dim, numel(t_k) - 1, m]);
 
 iterations = 120;
 lambda_matrix = sigma * sigma' * R;
-lambda = lambda_matrix(1) * 100;
+lambda = lambda_matrix(1) * 1;
 average_cost = zeros([1, iterations]);
 cost_t = zeros([numel(t_k) - 1, m, iterations]);
 cost_exit = zeros([m, iterations]);
 for j = 1 : iterations
     %[g_k(:, 1), twist_k(:, :, 1), delta_u(:, :, 1), w_k(:,:,1)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma*0);
     %[~, g_k(:, 1), twist_k(:, :, 1), ~, delta_u(:, :, 1)] = sode45_liegroup(u_k, sigma*0, w, t_k, noise_delta_t, g0, twist0, J_b, tolerances);
-    for i = 1 : m
+    parfor i = 1 : m
         P_k_i = zeros([3, 3, numel(t_k)]);
         P_k_i(:, :, 1) = P0;
         X_k_i = zeros([3, 3, numel(t_k)]);
@@ -145,8 +131,8 @@ for j = 1 : iterations
         X_k(:, :, :, i) = X_k_i;
     end
     
-    [L, cost_t(:, :, j), cost_exit(:, j)] = liegroup_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, R, S_g = S_g, S_twist = S_twist);
-    %[L, cost_t(:, :, j), cost_exit(:, j)] = liegroup_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, R, S_g = S_g, S_twist = S_twist, state_running_cost = sun_constraint);
+    %[L, cost_t(:, :, j), cost_exit(:, j)] = liegroup_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, R, S_g = S_g, S_twist = S_twist);
+    [L, cost_t(:, :, j), cost_exit(:, j)] = liegroup_cost(g_k, twist_k, u_k + delta_u, control_delta_t, gtarg, twisttarg, R, S_g = S_g, S_twist = S_twist, state_running_cost = chance_constrained_state_running_cost, X_k = X_k);
 
 %    [u_k, D_k] = liegroup_update(g_k, u_k, twist_k, pagemtimes(sigma, w_k), f, B, R, L, t_k, lambda);
     u_km1 = u_k;
@@ -156,7 +142,7 @@ for j = 1 : iterations
     average_cost(j) = min(sum(L .* control_delta_t, 1), [], "all");
     average_cost(j)
 
-    if mod(j, 40) == 0 || j == 1
+    if mod(j, 20) == 0 || j == 1
         %[t_opt, x_opt, ~, delta_u_opt] = sode45(f_with_control, u_k, sigma, w, t_k, noise_delta_t, x0, tolerances);
 
         figure
@@ -266,10 +252,10 @@ end
 
 
 %% Time Histories
-sigma_dist = 0.03; % [kg m2 / s2]
-sigma = [sigma_dist, 0, 0; 0, sigma_dist, 0; 0, 0, sigma_dist]; % need to double check the sqrt(delta t) part
+sigma_dist = 0.05; % [kg m2 / s2]
+sigma = [2 * sigma_dist, 0, 0; 0, 1 * sigma_dist, 0; 0, 0, 1 * sigma_dist]; % need to double check the sqrt(delta t) part
 
-m = 50;
+m = 100;
 
 g_k = createArray(numel(t_k), m, class(g0)); % array of group elements
 twist_k = zeros(G.dim, numel(t_k), m); % array of twists (body velocities)
@@ -277,8 +263,9 @@ delta_u = zeros([G.dim, numel(t_k) - 1, m]);
 w_k = zeros([G.dim, numel(t_k) - 1, m]);
 
 parfor i = 1 : m
+    g0_i = g0.sample_right_gaussian(P0);
     %[g_k(:, i), twist_k(:, :, i), delta_u(:, :, i), w_k(:,:,i)] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma);
-    [~, g_k(:, i), twist_k(:, :, i), ~, delta_u(:, :, i)] = sode45_liegroup(u_k, sigma, w, t_k, noise_delta_t, g0, twist0, J_b, tolerances);
+    [~, g_k(:, i), twist_k(:, :, i), ~, delta_u(:, :, i)] = sode45_liegroup(u_k, sigma, w, t_k, noise_delta_t, g0_i, twist0, J_b, tolerances);
 end
 %[g_k_nom, twist_k_nom, delta_u_nom] = one_step_euler_maruyama_lie_group(f, B, g0, twist0, u_k, t_k, sigma*0);
 [~, g_k_nom, twist_k_nom, ~, delta_u_nom] = sode45_liegroup(u_k, sigma*0, @(n) zeros([G.dim, n]), t_k, noise_delta_t, g0, twist0, J_b, tolerances);
@@ -497,15 +484,20 @@ yscale("log")
 %%
 figure
 plot_basis(g0.element, "i", ":", scale = 1);
-for i = 1 : 5 : numel(t_k)
+for i = 1 : 20 : numel(t_k)
     plot_basis(g_k_nom(i).element, "", "-", scale = 0.7);
     sensor_direction_inertial = g_k_nom(i).element * sensor_direction_body;
     quiver3(0, 0, 0, sensor_direction_inertial(1), sensor_direction_inertial(2), sensor_direction_inertial(3), Color = "m", DisplayName="", AutoScaleFactor=1, HandleVisibility="off")
+    for j = 1 : m
+        sensor_direction_inertial = g_k(i, j).element * sensor_direction_body;
+        quiver3(0, 0, 0, sensor_direction_inertial(1), sensor_direction_inertial(2), sensor_direction_inertial(3), Color = "cyan", DisplayName="", AutoScaleFactor=0.8, HandleVisibility="off")
+    end
 end
 plot_basis(gtarg.element, "f", "--", scale = 1)
 quiver3(0, 0, 0, sensor_direction_inertial(1), sensor_direction_inertial(2), sensor_direction_inertial(3), DisplayName="sensor", AutoScaleFactor=1, Color = "m")
 quiver3(0, 0, 0, sun_direction(1), sun_direction(2), sun_direction(3), DisplayName="sun", AutoScaleFactor=1)
 [X,Y,Z]=cylinder([0 deg2rad(cone_angle)], 50);
+Z = Z * 0.9;
 %axis([0 1,-1 1,-.5 .5])
 M=[sun_dcm, zeros([3, 1]); zeros([1, 3]), 1];
 h=surf(X,Y,Z,'Parent',hgtransform('Matrix',M),'LineStyle','none','FaceAlpha',0.4);

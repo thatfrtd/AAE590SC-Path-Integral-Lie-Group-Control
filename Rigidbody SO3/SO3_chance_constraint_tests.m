@@ -124,6 +124,32 @@ quiver3(0, 0, 0, alpha(1), alpha(2), alpha(3), 1.5)
 axis equal
 colorbar
 
+%%
+tau = randn([G.dim, 10000]);
+tau = tau ./ vecnorm(tau);
+
+for i = 1 : size(tau, 2)
+    const(i) = floor(cosd(30) - dot(tau(:, i), sun_direction));
+end
+
+figure
+scatter3(tau(1, :), tau(2, :), tau(3, :), 1, const); hold on
+quiver3(0, 0, 0, alpha(1), alpha(2), alpha(3), 1.5)
+%quiver3(0, 0, 0, crossvec(1), crossvec(2), crossvec(3), 1.5)
+axis equal
+colorbar
+
+quiver3(0, 0, 0, sun_direction(1), sun_direction(2), sun_direction(3), DisplayName="sun", AutoScaleFactor=1)
+[X,Y,Z]=cylinder([0 deg2rad(30)], 50);
+Z = Z * 0.9;
+%axis([0 1,-1 1,-.5 .5])
+M=[sun_dcm, zeros([3, 1]); zeros([1, 3]), 1];
+h=surf(X,Y,Z,'Parent',hgtransform('Matrix',M),'LineStyle','none','FaceAlpha',0.4);
+view([30,35])
+grid on
+light
+axis equal
+
 
 %%
 [c, i_min] = min(const);
