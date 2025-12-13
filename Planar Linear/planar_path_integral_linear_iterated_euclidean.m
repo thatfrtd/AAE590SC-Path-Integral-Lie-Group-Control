@@ -42,7 +42,7 @@ for j = 1 : iterations
             v(:, :, i) = x_full(3:4, :);
         end
     elseif integration_method == "oneeuler"
-        parfor i = 1 : m
+        for i = 1 : m
             [t(:, i), x(:, :, i), v(:, :, i), ~, delta_u(:, :, i)] = one_step_euler_maruyama_euclidean(f_func, B_func, u_k, sigma, t_k, x0, v0);
         end
     end
@@ -64,7 +64,7 @@ for j = 1 : iterations
         %L_flat = repmat(L_new', 101, 1);
         L_new = [L_new; L_new(end, :)];
         scatter(squeeze(x(1, :)), squeeze(x(2, :)), [], L_new(:), "filled"); hold on
-        alpha(L_new(:))
+        %alpha(L_new(:))
         plot(squeeze(x_new(1, :)), squeeze(x_new(2, :)), LineStyle="--", LineWidth=1, Color="r"); hold on
         scatter(xtarg(1), xtarg(2));
         xlabel("X [m]")

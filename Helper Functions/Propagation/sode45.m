@@ -9,13 +9,18 @@ arguments
     x0
     tolerances
     options.w_k_func = []
+    options.w_k = []
 end
 %SODE45 Summary of this function goes here
 %   Detailed explanation goes here
 
 % Create continuous noise function
 if isempty(options.w_k_func)
-    w_k = w(numel(t_k(1):noise_delta_t:t_k(end)));
+    if isempty(options.w_k)
+        w_k = w(numel(t_k(1):noise_delta_t:t_k(end)));
+    else
+        w_k = options.w_k;
+    end
     options.w_k_func = @(t) w_k(:, floor(t /noise_delta_t) + 1);
 end
 

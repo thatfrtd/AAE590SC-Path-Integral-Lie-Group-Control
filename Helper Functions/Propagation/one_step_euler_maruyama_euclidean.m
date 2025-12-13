@@ -25,6 +25,6 @@ v_k(:, 1) = v0;
 for i = 1 : (numel(t_k) - 1)
     x_k(:, i + 1) = x_k(:, i) + v_k(:, i) * delta_t;
     delta_u(:, i) = sigma / sqrt(delta_t) * w_k(:, i);
-    v_k(:, i + 1) = v_k(:, i) + f(t_k(i), x_k(:, i)) * delta_t + B(t_k(i), x_k(:, i)) * (u_k(:, i) + delta_u(:, i)) * delta_t;
+    v_k(:, i + 1) = v_k(:, i) + f(t_k(i), x_k(:, i), v_k(:, i)) * delta_t + B(t_k(i), x_k(:, i)) * (u_k(:, i) + delta_u(:, i)) * delta_t;
 end
 end

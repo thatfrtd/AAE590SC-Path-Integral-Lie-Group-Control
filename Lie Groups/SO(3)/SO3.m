@@ -28,7 +28,7 @@ classdef SO3 < Group
         function adjoint = ad(G, twist)
             % Lie algebra adjoint (Lie Bracket)
             % The derivative of Ad at identity
-            % Always G.hat()?
+            % Always G.hat()? - no
             adjoint = G.hat(twist).element;
         end
 

@@ -12,6 +12,10 @@ classdef SE2_RotationMatrix < Group
     
     methods
         function obj = SE2_RotationMatrix(R, r)
+            arguments
+                R = eye(2)
+                r = zeros([2, 1])
+            end
             %SE2_ROTATIONMATRIX Construct an instance of this class
             %   Detailed explanation goes here
             obj.element = [R, r; zeros([1, 2]), 1];
@@ -28,8 +32,9 @@ classdef SE2_RotationMatrix < Group
             composition = SE2_RotationMatrix(X.R * Y.R, X.r + X.R * Y.r);
         end
         function inverse = inv(X)
-            inverse = [X.R', -X.R' * X.r;
-                       0, 0, 1];
+            inverse = X;
+            inverse.element = [X.R', -X.R' * X.r;
+                               0, 0, 1];
         end
 
         function val = constraint(X)
@@ -44,18 +49,18 @@ classdef SE2_RotationMatrix < Group
             rho = tau_hat(1:2, 3);
             tau = [rho; theta];
         end
-        function tau_hat = hat(tau)
-            rho = tau(1:2);
-            theta = tau(3);
-            theta_cross = [0, -theta; 
-                           theta, 0];
-            tau_hat = [theta_cross, rho; 
-                        0, 0, 0];
+        function tau_hat = hat(G, tau)
+            rho = tau(3);
+            theta = tau(1:2);
+            theta_cross = skew2(theta);
+            tau_hat = G;
+            tau_hat.element = [theta_cross, rho; 
+                               0, 0, 0];
         end
 
         function X = Exp(G, tau)
-            theta = tau(3);
-            rho = tau(1:2);
+            theta = tau(1);
+            rho = tau(2:3);
             R = make_R2(theta);
             r = G.V(theta) * rho;
             X = SE2_RotationMatrix(R, r);
@@ -80,18 +85,25 @@ classdef SE2_RotationMatrix < Group
             Adjoint = [X.R, -skew2(1) * X.r;
                        0, 0, 1];
         end
-        function adjoint = ad(G, twist)
-            % Tangent space adjoint
-            adjoint = Ad(G.Exp(twist));
-        end
-
+        
         function val = V(obj, theta)
             % SO(2) left jacobian
-            val = sin(theta) / theta * eye(2) + (1 - cos(theta)) / theta * skew2(1);
+            if theta ~= 0
+                val = sin(theta) / theta * eye(2) + (1 - cos(theta)) / theta * skew2(1);
+            else
+                val = eye(2); % limit of sin(x) / x as x -> 0 is 1
+            end
         end
         function val = V_inv(obj, theta)
             % SO(2) inverse left jacobian
             val = sin(theta) / theta * eye(2) + (1 - cos(theta)) / theta * skew2(1);
+        end
+    end
+
+    methods (Static)
+        function adjoint = ad(G, twist)
+            % Tangent space adjoint
+            adjoint = [zeros([1, 3]); -skew2(1) * twist(2:3), skew2(twist(1))]; % Verify??
         end
     end
 end
