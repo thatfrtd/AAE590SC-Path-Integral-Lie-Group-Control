@@ -9,5 +9,5 @@ Reproducing results in paper [Path Integral Control on Lie Groups](https://ieeex
 Chance constrained PI based on paper [Chance-Constrained Information-Theoretic Stochastic Model Predictive Control with Safety Shielding](https://www.merl.com/publications/docs/TR2024-179.pdf) 
 <img width="570" height="320" alt="image" src="https://github.com/user-attachments/assets/e9ce2a98-4fd2-40a2-afe7-f56aff13eb4f" />
 
-Chance constrained sun keep out cone using Lie Group path integral control on SO3
+Chance constrained sun keep out cone using Lie Group path integral control on SO3 - example livescript is `example_SO3.m`
 <img width="1852" height="811" alt="chance_constrained_SO3" src="https://github.com/user-attachments/assets/bf211428-c458-466a-bed9-8047fa22c47d" />
