@@ -11,12 +11,29 @@ arguments
     R
     options.S_g = 500 * eye(size(twist_k, 1))
     options.S_twist = 100 * eye(size(twist_k, 1))
+    options.state_running_cost = @(g, twist) 0;
+    options.X_k = []
 end
 
 %% Path Cost
 %diff_cost = squeeze(cumsum(vecnorm(diff(u_k, 1, 2)), 2)); % penalize change in control 
 
-cost_t = 1 / 2 * cumsum(squeeze(dot(u_k, pagemtimes(R, u_k)) * delta_t), 1, "reverse");% + diff_cost * diff_multiplier;
+% Control Running Cost
+cost_control_t = 1 / 2 * cumsum(squeeze(dot(u_k, pagemtimes(R, u_k)) * delta_t), 1, "reverse");% + diff_cost * diff_multiplier;
+
+% State Running Cost
+cost_state_t = zeros(size(g_k, 2:3));
+for i = 1 : size(g_k, 1) - 1
+    for j = 1 : size(g_k, 2)
+        if isempty(options.X_k)
+            cost_state_t(i, j) = options.state_running_cost(g_k(i, j), twist_k(:, i, j));
+        else 
+            cost_state_t(i, j) = options.state_running_cost(g_k(i, j), twist_k(:, i, j), options.X_k(:, :, i, j));
+        end
+    end
+end
+
+cost_t = cost_control_t + cost_state_t;
 
 %% Exit Cost
 g_f = g_k(end, :);

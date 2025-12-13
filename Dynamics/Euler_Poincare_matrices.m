@@ -21,7 +21,7 @@ ad_star_twist = @(twist) G.ad(G, twist)';
 %dtwist = J_b \ (ad_star_twist * J_b * twist + B * u);
 
 f = @(x, twist) pagemtimes(J_b \ ad_star_twist(twist) * J_b, twist) + J_b \ u_ext(x);
-B = @(t, x) J_b \ B_map;
+B = @(t, x) J_b \ B_map(x);
 
 end
 
