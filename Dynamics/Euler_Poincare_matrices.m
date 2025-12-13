@@ -12,7 +12,7 @@ arguments
     G
     J_b
     B_map
-    u_ext = @(x) zeros([G.dim, 1])
+    u_ext = @(x, twist) zeros([G.dim, 1])
 end
 
 % coadjoint action is always transpose of adjoint?
@@ -20,7 +20,8 @@ ad_star_twist = @(twist) G.ad(G, twist)';
 
 %dtwist = J_b \ (ad_star_twist * J_b * twist + B * u);
 
-f = @(x, twist) pagemtimes(J_b \ ad_star_twist(twist) * J_b, twist) + J_b \ u_ext(x);
+
+f = @(x, twist) pagemtimes(J_b \ ad_star_twist(twist) * J_b, twist) + J_b \ u_ext(x, twist);
 B = @(t, x) J_b \ B_map(x);
 
 end

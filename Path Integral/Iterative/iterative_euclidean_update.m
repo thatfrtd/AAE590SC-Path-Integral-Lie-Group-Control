@@ -5,13 +5,13 @@ Y_uu = R; % B' * inv(Y) * B
 
 L = zeros([size(v_k, 2) - 1, size(v_k, 3)]);
 for i = 1 : size(v_k, 3)
-    mu_k = diff(v_k(:, :, i), 1, 2) / delta_t - f(:, 2:end, i) - B * u_n;
+    mu_k = diff(v_k(:, :, i), 1, 2) / delta_t - f(:, 2:end, i) - reshape(pagemtimes(B, reshape(u_n + delta_u(:, :, i), 2, 1, [])), 2, []);
     
     % Create Lagrangian
     L(:, i) = cost_exit(i)' ...
         + 1 / 2 * cumsum(cost_state(:, i), 1, "reverse") * delta_t ...
-        + 1 / 2 * cumsum(dot(mu_k, inv(Y) * mu_k), 2, "reverse")' * delta_t * 0 ...
-        + 1 / 2 * cumsum(dot((u_n + delta_u(:, :, i)), (pagemtimes(Y_uu, u_n + delta_u(:, :, i)) + 0*2 * B' * inv(Y) * mu_k)), 2, "reverse")' * delta_t;
+        + 1 / 2 * cumsum(dot(mu_k, inv(Y) * mu_k), 2, "reverse")' * delta_t ...
+        + 1 / 2 * cumsum(dot((u_n + delta_u(:, :, i)), (pagemtimes(Y_uu, u_n + delta_u(:, :, i)) + 2 * B' * inv(Y) * mu_k)), 2, "reverse")' * delta_t;
 end
 
 
